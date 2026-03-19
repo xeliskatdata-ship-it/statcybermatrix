@@ -1,8 +1,23 @@
+"""
+Nettoyage des articles bruts
+
+Entree  : data/raw/articles_YYYY-MM-DD.csv
+Sortie  : data/cleaned/articles_cleaned_YYYY-MM-DD.csv
+
+Colonnes en entree  : source, title, description, url, published_at, collected_at
+Colonnes en sortie  : source, title, description, url, published_at, collected_at,
+                      published_date, content_length, category
+"""
+
 import pandas as pd
 import os
 import re
 from datetime import datetime
 
+
+# ---------------------------------------------------
+# CONFIGURATION
+# ---------------------------------------------------
 
 # Dossier source : fichiers bruts collectes par acquisition.py
 RAW_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw')
@@ -13,23 +28,139 @@ os.makedirs(CLEANED_DIR, exist_ok=True)
 
 # Dictionnaire de detection des categories de menace par mots-cles
 # Utilise dans add_columns() pour creer la colonne "category"
+# Enrichi avec de nombreuses variantes et nouvelles categories
 THREAT_KEYWORDS = {
-    "ransomware"    : ["ransomware", "ransom", "lockbit", "blackcat", "ryuk", "conti"],
-    "phishing"      : ["phishing", "spear-phishing", "credential", "spoofing", "smishing"],
-    "vulnerability" : ["vulnerability", "cve", "patch", "exploit", "zero-day", "zero day", "rce"],
-    "malware"       : ["malware", "trojan", "backdoor", "spyware", "rootkit", "botnet", "worm"],
-    "apt"           : ["apt", "nation-state", "threat actor", "campaign", "espionage"],
-    "ddos"          : ["ddos", "denial of service", "flood"],
-    "data_breach"   : ["data breach", "leak", "exposed", "stolen data", "exfiltration"],
-    "supply_chain"  : ["supply chain", "third-party", "dependency", "open source attack"],
+
+    # --- Ransomware : logiciels de chiffrement et extorsion
+    "ransomware"    : [
+        "ransomware", "ransom", "lockbit", "blackcat", "ryuk", "conti",
+        "akira", "alphv", "clop", "hive", "revil", "maze", "darkside",
+        "encrypted", "decryptor", "double extortion", "ransomed",
+        "play ransomware", "medusa", "8base", "hunters"
+    ],
+
+    # --- Phishing : usurpation d'identite et vol de credentials
+    "phishing"      : [
+        "phishing", "spear-phishing", "spearphishing", "credential",
+        "spoofing", "smishing", "vishing", "whaling", "pretexting",
+        "social engineering", "fake login", "credential harvesting",
+        "business email compromise", "bec", "email fraud", "impersonation",
+        "lure", "malicious email", "phish", "typosquatting"
+    ],
+
+    # --- Vulnerability : failles et patches de securite
+    "vulnerability" : [
+        "vulnerability", "vulnerabilities", "cve", "patch", "exploit",
+        "zero-day", "zero day", "0day", "rce", "remote code execution",
+        "sql injection", "xss", "cross-site", "buffer overflow",
+        "privilege escalation", "authentication bypass", "arbitrary code",
+        "security flaw", "security hole", "unpatched", "proof of concept",
+        "poc", "nvd", "mitre", "cvss", "critical flaw", "security update",
+        "security advisory", "disclosure", "severity", "attack surface",
+        "misconfiguration", "exposed port", "open redirect"
+    ],
+
+    # --- Malware : logiciels malveillants generiques
+    "malware"       : [
+        "malware", "trojan", "backdoor", "spyware", "rootkit",
+        "botnet", "worm", "virus", "keylogger", "stealer", "infostealer",
+        "dropper", "loader", "payload", "rat", "remote access trojan",
+        "adware", "fileless", "polymorphic", "obfuscated", "shellcode",
+        "stealthy", "persistence", "command and control", "c2", "c&c",
+        "redline", "raccoon", "agent tesla", "formbook", "asyncrat",
+        "emotet", "trickbot", "qakbot", "cobalt strike"
+    ],
+
+    # --- APT : menaces persistantes avancees et acteurs etatiques
+    "apt"           : [
+        "apt", "nation-state", "nation state", "threat actor", "campaign",
+        "espionage", "state-sponsored", "state sponsored", "cyber espionage",
+        "advanced persistent", "lazarus", "fancy bear", "cozy bear",
+        "sandworm", "charming kitten", "volt typhoon", "salt typhoon",
+        "turla", "fin7", "ta505", "hafnium", "scattered spider",
+        "intelligence gathering", "attribution", "geopolitical",
+        "military cyber", "targeted attack", "ttp", "ttps"
+    ],
+
+    # --- DDoS : attaques par deni de service
+    "ddos"          : [
+        "ddos", "denial of service", "dos attack", "flood", "amplification",
+        "distributed denial", "botnet attack", "traffic flood", "layer 7",
+        "layer 4", "syn flood", "udp flood", "volumetric attack",
+        "application layer attack", "bandwidth exhaustion", "killnet",
+        "anonymous sudan", "hacktivist"
+    ],
+
+    # --- Data breach : fuites et vols de donnees
+    "data_breach"   : [
+        "data breach", "breach", "leak", "exposed", "stolen data",
+        "exfiltration", "data theft", "data stolen", "personal data",
+        "pii", "gdpr", "data dump", "database exposed", "records stolen",
+        "customer data", "sensitive data", "compromised data",
+        "information disclosure", "data loss", "insider threat",
+        "unauthorized access", "data for sale", "dark web"
+    ],
+
+    # --- Supply chain : attaques via les chaines d'approvisionnement
+    "supply_chain"  : [
+        "supply chain", "third-party", "third party", "dependency",
+        "open source attack", "software supply chain", "package",
+        "npm", "pypi", "typosquatting package", "malicious package",
+        "build system", "ci/cd", "devops attack", "solarwinds",
+        "xz utils", "polyfill", "compromised library", "upstream attack"
+    ],
+
+    # --- Cloud : securite des infrastructures cloud
+    "cloud"         : [
+        "cloud", "aws", "azure", "google cloud", "gcp", "s3 bucket",
+        "cloud storage", "misconfigured", "cloud security", "saas",
+        "paas", "iaas", "kubernetes", "container security", "docker",
+        "serverless", "cloud breach", "identity and access", "iam",
+        "cloud exposure", "public bucket", "open bucket"
+    ],
+
+    # --- IoT : securite des objets connectes
+    "iot"           : [
+        "iot", "internet of things", "smart device", "connected device",
+        "industrial control", "ics", "scada", "operational technology",
+        "ot security", "embedded device", "firmware", "router",
+        "ip camera", "smart home", "industrial iot", "iiot",
+        "mirai", "botnet iot", "default credentials"
+    ],
+
+    # --- Cryptojacking : minage illegal de cryptomonnaies
+    "cryptojacking" : [
+        "cryptojacking", "cryptomining", "crypto mining", "monero",
+        "coinhive", "mining malware", "cpu hijacking", "browser mining",
+        "xmrig", "unauthorized mining", "crypto stealer",
+        "cryptocurrency theft", "wallet drainer"
+    ],
+
+    # --- Regulation : conformite et cadre legal
+    "regulation"    : [
+        "regulation", "compliance", "gdpr", "hipaa", "pci dss",
+        "nis2", "dora", "iso 27001", "nist", "sec disclosure",
+        "cyber law", "legislation", "data protection", "privacy law",
+        "fine", "penalty", "audit", "certification", "framework"
+    ],
+
+    # --- Incident response : gestion des incidents et forensics
+    "incident"      : [
+        "incident response", "breach response", "forensics", "investigation",
+        "post-mortem", "remediation", "containment", "threat hunting",
+        "detection", "siem", "edr", "xdr", "soar", "playbook",
+        "ioc", "indicator of compromise", "threat intelligence",
+        "cyber insurance", "recovery", "business continuity"
+    ],
 }
+
 
 # ---------------------------------------------------
 # 1. CHARGEMENT
 # ---------------------------------------------------
 def load_latest_raw():
     """
-    Chargement fichier CSV brut le plus recent depuis data/raw/.
+    Charge le fichier CSV brut le plus recent depuis data/raw/.
     Retourne le DataFrame et le nom du fichier source.
     """
     # Lister tous les fichiers CSV dans data/raw/
@@ -58,6 +189,7 @@ def load_latest_raw():
 def remove_duplicates(df):
     """
     Supprime les articles en double.
+
     Criteres de doublon :
       - Meme URL   : deux sources qui publient le meme lien
       - Meme titre : articles repris mot pour mot sous une URL differente
@@ -74,6 +206,7 @@ def remove_duplicates(df):
     print(f"Doublons supprimes   : {before - after}  |  Articles restants : {after}")
 
     return df
+
 
 # ---------------------------------------------------
 # 3. TRAITEMENT DES VALEURS MANQUANTES
@@ -106,6 +239,7 @@ def handle_missing(df):
     print(f"Valeurs manquantes   : {before} --> {after}")
 
     return df
+
 
 # ---------------------------------------------------
 # 4. NORMALISATION DES DATES
