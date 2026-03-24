@@ -1,11 +1,17 @@
+"""
+CyberPulse -- app.py
+Dashboard Streamlit -- Page d'accueil
+Charge les metriques directement depuis PostgreSQL via db_connect.
+"""
+
 import streamlit as st
 import pandas as pd
 import os
 import sys
 
-# Ajout src/ au path pour importer utils_lang
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-from utils_lang import t, translate_dataframe
+from db_connect import get_mart_k1, get_mart_k3, get_stg_articles, force_refresh
+from utils_lang import t
 
 # ---------------------------------------------------
 # CONFIGURATION PAGE
@@ -82,123 +88,85 @@ html, body, [class*="css"] { font-family: 'IBM Plex Sans', sans-serif; }
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------
-# CHARGEMENT DES DONNEES
-# ---------------------------------------------------
-@st.cache_data
-def load_data():
-    cleaned_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'cleaned')
-    files = [f for f in os.listdir(cleaned_dir) if f.startswith('articles_cleaned')]
-    if not files:
-        return pd.DataFrame()
-    latest   = sorted(files)[-1]
-    filepath = os.path.join(cleaned_dir, latest)
-    df = pd.read_csv(filepath, encoding='utf-8')
-    df['published_date'] = pd.to_datetime(df['published_date'], errors='coerce')
-    return df
-
-df = load_data()
-
-# ---------------------------------------------------
 # SIDEBAR
 # ---------------------------------------------------
 with st.sidebar:
-    st.markdown("""
-    <div style='padding:16px 0 8px 0'>
-        <div style='font-family:IBM Plex Mono,monospace;font-size:1.1rem;
-                    font-weight:700;color:#e2e8f0;'>CyberPulse</div>
-        <div style='font-size:0.72rem;color:#64748b;margin-top:2px'>
-            Veille cyber automatisee
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        "<div style='padding:12px 0 8px 0;text-align:center'>"
+        "<img src='https://raw.githubusercontent.com/twitter/twemoji/master/assets/svg/1f6e1.svg' "
+        "style='width:90%;max-width:200px;border-radius:10px;margin-bottom:6px'>"
+        "<div style='font-size:0.68rem;color:#64748b;letter-spacing:.08em'>"
+        "Veille cyber automatisee</div>"
+        "</div>",
+        unsafe_allow_html=True
+    )
     st.divider()
 
-    # --- SELECTEUR DE LANGUE ---
     lang_choice = st.selectbox(
-        t("Language", "fr"),
-        options=["Francais", "English"],
+        t("Language", "en"),
+        options=["English", "Francais"],
         index=0,
         key="lang_select"
     )
     lang = "fr" if lang_choice == "Francais" else "en"
-
-    # Stocker la langue en session pour toutes les pages
     st.session_state['lang'] = lang
 
     st.divider()
 
-    # --- FILTRES ---
-    st.markdown(f"**{t('Global filters', lang)}**")
+    if st.button("Rafraichir les donnees", key="home_refresh"):
+        force_refresh()
+        st.rerun()
 
-    sources_dispo = sorted(df['source'].dropna().unique().tolist()) if not df.empty else []
-    sources_sel = st.multiselect(
-        t("Sources", lang),
-        options=sources_dispo,
-        default=sources_dispo,
-        key="global_sources"
+    st.divider()
+
+    # --- Sources actives ---
+    st.markdown(
+        "<div style='font-size:0.72rem;color:#64748b;text-transform:uppercase;"
+        "letter-spacing:.08em;margin-bottom:8px'>Sources actives</div>",
+        unsafe_allow_html=True
     )
-
-    if not df.empty and df['published_date'].notna().any():
-        date_min   = df['published_date'].min().date()
-        date_max   = df['published_date'].max().date()
-        date_range = st.date_input(
-            t("Period", lang),
-            value=(date_min, date_max),
-            min_value=date_min,
-            max_value=date_max,
-            key="global_dates"
-        )
-    else:
-        date_range = None
-
-    cats_dispo = sorted(df['category'].dropna().unique().tolist()) if not df.empty else []
-    cats_sel = st.multiselect(
-        t("Threat type", lang),
-        options=cats_dispo,
-        default=cats_dispo,
-        key="global_cats"
-    )
+    _df_src = get_mart_k1()
+    if not _df_src.empty:
+        _sources = sorted(_df_src['source'].unique().tolist())
+        for _s in _sources:
+            _n = int(_df_src[_df_src['source'] == _s]['nb_articles'].sum())
+            st.markdown(
+                f"<div style='font-size:0.75rem;color:#94a3b8;padding:2px 0'>"
+                f"<span style='color:#3b82f6'>&#9679;</span>&nbsp;{_s}"
+                f"<span style='color:#475569;float:right'>{_n}</span></div>",
+                unsafe_allow_html=True
+            )
 
     st.divider()
     st.markdown(
-        f"<div style='font-size:0.72rem;color:#475569'>"
-        f"Sprint 2 · Mars 2026<br>{len(df)} {t('Articles loaded', lang)}</div>",
+        "<div style='font-size:0.72rem;color:#475569'>"
+        "Sprint 2 · Mars 2026<br>PostgreSQL · dbt · Streamlit</div>",
         unsafe_allow_html=True
     )
 
 # ---------------------------------------------------
-# FILTRAGE
+# CHARGEMENT METRIQUES DEPUIS POSTGRESQL
 # ---------------------------------------------------
-def apply_filters(dataframe):
-    dff = dataframe.copy()
-    if sources_sel:
-        dff = dff[dff['source'].isin(sources_sel)]
-    if cats_sel:
-        dff = dff[dff['category'].isin(cats_sel)]
-    if date_range and len(date_range) == 2:
-        dff = dff[
-            (dff['published_date'].dt.date >= date_range[0]) &
-            (dff['published_date'].dt.date <= date_range[1])
-        ]
-    return dff
+df_k1 = get_mart_k1()
+df_k3 = get_mart_k3()
 
-dff = apply_filters(df)
-
-# Stocker en session pour les pages KPI
-st.session_state['df_filtered'] = dff
-st.session_state['df_full']     = df
+total_articles = int(df_k1['nb_articles'].sum())                       if not df_k1.empty else 0
+nb_sources     = df_k1['source'].nunique()                             if not df_k1.empty else 0
+top_source     = df_k1.groupby('source')['nb_articles'].sum().idxmax() if not df_k1.empty else '—'
+top_cat        = df_k3.groupby('category')['nb_articles'].sum().idxmax() if not df_k3.empty else '—'
+date_max       = df_k1['published_date'].max().strftime('%d/%m/%Y')    if not df_k1.empty else '—'
 
 # ---------------------------------------------------
-# PAGE D'ACCUEIL
+# BANNER
 # ---------------------------------------------------
 st.markdown(f"""
-<div class="banner">
+<div class="banner" style="text-align:center;padding:40px 36px;">
     <div class="banner-title">CyberPulse</div>
-    <div class="banner-sub">
+    <div class="banner-sub" style="justify-content:center;font-size:1rem">
         <span class="live-dot"></span>
         {"Veille automatique des menaces cyber" if lang == "fr" else "Automated cyber threat monitoring"}
-        &nbsp;·&nbsp; {len(sources_sel)} {t('Sources active', lang)}
-        &nbsp;·&nbsp; {len(dff)} {"articles" if lang == "fr" else "articles"}
+        &nbsp;·&nbsp; {nb_sources} {t('Sources active', lang)}
+        &nbsp;·&nbsp; {total_articles} articles
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -208,18 +176,12 @@ st.markdown(f'<div class="section-tag">{t("Overview", lang)}</div>', unsafe_allo
 
 c1, c2, c3, c4, c5 = st.columns(5)
 
-total      = len(dff)
-nb_sources = dff['source'].nunique()      if not dff.empty else 0
-top_cat    = dff['category'].value_counts().index[0] if not dff.empty else "—"
-top_source = dff['source'].value_counts().index[0]   if not dff.empty else "—"
-moy_len    = int(dff['content_length'].mean())        if not dff.empty else 0
-
 for col, val, lbl, sub, cls in [
-    (c1, str(total),      t("Filtered articles", lang), f"{nb_sources} {t('Sources active', lang)}", ""),
-    (c2, str(nb_sources), t("Sources active", lang),    "NewsAPI + RSS",                              "green"),
-    (c3, top_cat,         t("Top threat", lang),        "by volume" if lang == "en" else "par volume","orange"),
-    (c4, top_source,      t("Top source", lang),        "by count"  if lang == "en" else "par nb",    "teal"),
-    (c5, str(moy_len),    t("Avg length", lang),        "chars",                                      "red"),
+    (c1, str(total_articles), t("Filtered articles", lang), f"{nb_sources} {t('Sources active', lang)}", ""),
+    (c2, str(nb_sources),     t("Sources active", lang),    "NewsAPI + RSS",                              "green"),
+    (c3, top_cat,             t("Top threat", lang),        "par volume" if lang == "fr" else "by volume","orange"),
+    (c4, top_source,          t("Top source", lang),        "par nb" if lang == "fr" else "by count",     "teal"),
+    (c5, date_max,            "Derniere mise a jour",       "date article recente",                       "red"),
 ]:
     col.markdown(f"""
     <div class="metric-card {cls}">
@@ -231,25 +193,21 @@ for col, val, lbl, sub, cls in [
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- Apercu ---
+# --- Apercu articles recents ---
 st.markdown(f'<div class="section-tag">{t("Data preview", lang)}</div>', unsafe_allow_html=True)
 
-if not dff.empty:
-    cols_affichees = ['source', 'title', 'published_date', 'category', 'content_length']
+df_preview = get_stg_articles(limit=20)
 
-    # Traduire les titres si langue francaise demandee
-    # Note : desactive par defaut car lent sur gros volumes
-    # Pour activer : decommenter la ligne suivante
-    # dff_display = translate_dataframe(dff, ['title'], lang)
-
+if not df_preview.empty:
+    cols_affichees = ['source', 'title', 'published_date', 'content_length']
     st.dataframe(
-        dff[cols_affichees].sort_values('published_date', ascending=False).head(20),
+        df_preview[cols_affichees].sort_values('published_date', ascending=False),
         use_container_width=True,
         hide_index=True,
         height=380
     )
     st.markdown("<br>", unsafe_allow_html=True)
-    csv = dff.to_csv(index=False).encode('utf-8')
+    csv = df_preview.to_csv(index=False).encode('utf-8')
     st.download_button(
         label=t("Download CSV", lang),
         data=csv,
@@ -260,7 +218,7 @@ else:
     st.warning(t("No data", lang))
 
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown(f'<div class="section-tag">Navigation</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-tag">Navigation</div>', unsafe_allow_html=True)
 st.markdown(
     f"<div style='color:#64748b;font-size:0.88rem'>{t('Navigation hint', lang)}</div>",
     unsafe_allow_html=True

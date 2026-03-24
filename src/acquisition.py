@@ -1,14 +1,24 @@
 """
 Collecte reelle des articles cyber
-Sources (17 au total) :
+
+Sources (45 au total) :
   API REST  : NewsAPI
   Flux RSS  : The Hacker News · BleepingComputer · Zataz · CISA Alerts
               Krebs on Security · Dark Reading · ANSSI · Schneier on Security
               SecurityWeek · Cyber Scoop · Threatpost
               The Record · Infosecurity Magazine · Helpnet Security
               Graham Cluley · CERT-EU
+  Cyber+    : Malwarebytes Labs · Naked Security · We Live Security
+              Trend Micro · Recorded Future Blog · Cybereason
+  OSINT     : OSINT Curious · Bellingcat · Intel471 · Shodan Blog
+              Maltego Blog · NixIntel · Sector035
+  ThreatIn. : SANS ISC · Mandiant · CrowdStrike · Securelist
+              Proofpoint · CIRCL · Abuse.ch
+  Invest.   : Citizen Lab · The Intercept · OCCRP · GreyNoise
+              Censys · VulnCheck · AttackerKB
+  FR Data   : French Breaches (fuites de donnees FR)
 
-Sortie : data/raw/articles_YYYY-MM-DD.csv dont le dernier créé est articles_cleaned_2026-03-18.csv (recréé car ajout de nouvelles sources)
+Sortie : data/raw/articles_YYYY-MM-DD.csv
 """
 
 import requests
@@ -24,11 +34,9 @@ load_dotenv()
 # CONFIGURATION
 # ---------------------------------------------------
 
-# Dossier de sortie pour les articles bruts
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Flux RSS : 16 sources publiques sans cle API
 RSS_FEEDS = {
     # -- Sources anglophones generales --
     "The Hacker News"      : "https://feeds.feedburner.com/TheHackersNews",
@@ -49,10 +57,46 @@ RSS_FEEDS = {
 
     # -- Sources francophones --
     "Zataz"                : "https://www.zataz.com/feed/",
+    "French Breaches"      : "https://frenchbreaches.com/feed.xml",
 
     # -- Sources gouvernementales officielles --
     "ANSSI"                : "https://www.cert.ssi.gouv.fr/feed/",
     "CERT-EU"              : "https://cert.europa.eu/publications/threat-intelligence/rss.xml",
+
+    # -- Sources cyber specialisees : analyse & recherche --
+    "Malwarebytes Labs"    : "https://blog.malwarebytes.com/feed/",
+    "Naked Security"       : "https://nakedsecurity.sophos.com/feed/",
+    "We Live Security"     : "https://www.welivesecurity.com/feed/",
+    "Trend Micro"          : "https://feeds.trendmicro.com/Anti-MalwareBlog",
+    "Recorded Future Blog" : "https://www.recordedfuture.com/feed",
+    "Cybereason"           : "https://www.cybereason.com/blog/rss.xml",
+
+    # -- Sources OSINT : investigations & renseignement open source --
+    "OSINT Curious"        : "https://osintcurio.us/feed/",
+    "Bellingcat"           : "https://www.bellingcat.com/feed/",
+    "Intel471"             : "https://intel471.com/blog/rss.xml",
+    "Shodan Blog"          : "https://blog.shodan.io/rss/",
+    "Maltego Blog"         : "https://www.maltego.com/blog/feed/",
+    "NixIntel"             : "https://nixintel.info/feed/",
+    "Sector035"            : "https://sector035.nl/feed",
+
+    # -- Threat Intelligence : IoC · APT · campagnes --
+    "SANS ISC"             : "https://isc.sans.edu/rssfeed_full.xml",
+    "Mandiant Blog"        : "https://www.mandiant.com/resources/blog/rss.xml",
+    "CrowdStrike Blog"     : "https://www.crowdstrike.com/blog/feed/",
+    "Securelist"           : "https://securelist.com/feed/",
+    "Proofpoint"           : "https://www.proofpoint.com/us/rss.xml",
+    "CIRCL"                : "https://www.circl.lu/pub/tr/rss/",
+    "Abuse.ch"             : "https://abuse.ch/blog/feed/",
+
+    # -- Investigation & technique avancee --
+    "Citizen Lab"          : "https://citizenlab.ca/feed/",
+    "The Intercept"        : "https://theintercept.com/feed/?rss",
+    "OCCRP"                : "https://occrp.org/en/feed/articles",
+    "GreyNoise Blog"       : "https://www.greynoise.io/blog/feed",
+    "Censys Blog"          : "https://censys.com/blog/feed/",
+    "VulnCheck"            : "https://vulncheck.com/blog/rss.xml",
+    "AttackerKB"           : "https://attackerkb.com/blog/feed/",
 }
 
 
@@ -111,19 +155,46 @@ def collect_newsapi():
 # ---------------------------------------------------
 def collect_rss():
     """
-    Collecte les articles depuis les 16 flux RSS.
-    Aucune cle API requise.
+    Collecte les articles depuis les flux RSS.
+    Strategie en 2 temps :
+      1. requests + User-Agent Chrome  (evite les blocages)
+      2. feedparser direct en fallback  (si requests echoue)
     """
     print("\nCollecte flux RSS...")
     articles  = []
     ok_count  = 0
     err_count = 0
 
-    for source_name, feed_url in RSS_FEEDS.items():
-        try:
-            feed  = feedparser.parse(feed_url)
-            count = 0
+    HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        )
+    }
 
+    for source_name, feed_url in RSS_FEEDS.items():
+        feed  = None
+        count = 0
+
+        # -- Tentative 1 : requests + User-Agent --
+        try:
+            response = requests.get(feed_url, headers=HEADERS, timeout=15)
+            feed     = feedparser.parse(response.content)
+        except Exception as e:
+            print(f"  WARN  -- {source_name:<28} -- requests echoue ({e}), tentative feedparser...")
+
+        # -- Tentative 2 : feedparser direct (fallback) --
+        if feed is None or len(feed.entries) == 0:
+            try:
+                feed = feedparser.parse(feed_url)
+            except Exception as e:
+                print(f"  ERREUR -- {source_name:<28} -- feedparser echoue aussi ({e})")
+                err_count += 1
+                continue
+
+        # -- Extraction des articles --
+        try:
             for entry in feed.entries:
                 articles.append({
                     "source"      : source_name,
@@ -135,14 +206,18 @@ def collect_rss():
                 })
                 count += 1
 
-            print(f"  OK -- {source_name:<28} -- {count} articles")
-            ok_count += 1
+            if count > 0:
+                print(f"  OK    -- {source_name:<28} -- {count} articles")
+                ok_count += 1
+            else:
+                print(f"  VIDE  -- {source_name:<28} -- 0 articles")
+                err_count += 1
 
         except Exception as e:
-            print(f"  ERREUR -- {source_name:<28} -- {e}")
+            print(f"  ERREUR -- {source_name:<28} -- extraction echouee ({e})")
             err_count += 1
 
-    print(f"\n  Bilan RSS : {ok_count} sources OK / {err_count} erreurs")
+    print(f"\n  Bilan RSS : {ok_count} sources OK / {err_count} erreurs ou vides")
     return articles
 
 
@@ -175,7 +250,6 @@ def save_to_csv(articles):
     print(f"  > {len(df)} articles sauvegardes")
     print(f"  > Colonnes : {list(df.columns)}")
 
-    # Distribution par source
     print("\n  Distribution par source :")
     for src, cnt in df['source'].value_counts().items():
         print(f"    {src:<28} : {cnt} articles")
@@ -189,7 +263,7 @@ def save_to_csv(articles):
 def collect_all():
     """
     Orchestre la collecte complete depuis toutes les sources :
-      NewsAPI --> RSS (16 sources) --> AlienVault OTX --> URLhaus --> CSV
+      NewsAPI --> RSS (44 sources : cyber + OSINT + threat intel + FR) --> CSV
     """
     print("=" * 60)
     print("CyberPulse -- Collecte reelle S2")
@@ -198,20 +272,13 @@ def collect_all():
     print("=" * 60)
 
     all_articles = []
-
-    # Collecte NewsAPI
     all_articles += collect_newsapi()
-
-    # Collecte RSS (16 sources)
     all_articles += collect_rss()
 
-    # Bilan
     print(f"\nTotal collecte : {len(all_articles)} articles")
     print(f"Sources actives : {len(set(a['source'] for a in all_articles))}")
 
-    # Sauvegarde
     filepath = save_to_csv(all_articles)
-
     print("\nCollecte terminee !")
     return filepath
 

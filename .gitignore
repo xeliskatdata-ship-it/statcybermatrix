@@ -1,9 +1,47 @@
-cat > .gitignore << 'EOF'
-__pycache__/
-*.pyc
-.env
+# ── Environnements Python ─────────────────────────────
 venv/
-*.csv
-*.parquet
+venv-dbt/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ── Variables d'environnement ─────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── dbt ───────────────────────────────────────────────
+dbt/target/
+dbt/logs/
+dbt/.user.yml
+dbt/profiles.yml
+
+# ── Données CSV ───────────────────────────────────────
+data/raw/*.csv
+data/cleaned/*.csv
+
+# ── Logs ─────────────────────────────────────────────
+logs/
+*.log
+
+# ── Cache dbt ─────────────────────────────────────────
+*.msgpack
+*.gpickle
+*.pickle
+
+# ── Notebooks ─────────────────────────────────────────
+notebooks/.ipynb_checkpoints/
+
+# ── IDE ───────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
 .DS_Store
-EOF
+Thumbs.db
+
+# ── Divers ────────────────────────────────────────────
+*.bak
+*.tmp
+*.orig

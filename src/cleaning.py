@@ -1,5 +1,5 @@
 """
-Nettoyage des articles bruts
+Sprint 2 : Nettoyage des articles bruts
 
 Entree  : data/raw/articles_YYYY-MM-DD.csv
 Sortie  : data/cleaned/articles_cleaned_YYYY-MM-DD.csv
@@ -215,7 +215,7 @@ def handle_missing(df):
     """
     Remplace les NaN par des valeurs neutres pour eviter les erreurs en aval.
 
-    Etat constate sur les donnees reelles (184 articles, 2026-03-13) :
+    Etat constate sur les donnees reelles (325 articles, 2026-03-18) :
       - description : 10 NaN  --> remplace par chaine vide ''
       - title       :  0 NaN  --> traite par precaution
       - url         :  0 NaN  --> traite par precaution
@@ -325,6 +325,34 @@ def normalize_text(df):
 # ---------------------------------------------------
 # 6. CREATION DES COLONNES UTILES
 # ---------------------------------------------------
+def detect_category(row):
+    """
+    Detecte la categorie de menace d'un article a partir de ses mots-cles.
+
+    Parcourt THREAT_KEYWORDS et retourne la premiere categorie trouvee
+    dans la concatenation title + description (en minuscules).
+    Retourne 'general' si aucun mot-cle ne correspond.
+
+    Sortie au niveau du module pour pouvoir etre testee independamment :
+      from cleaning import detect_category
+    """
+    # Concatener title + description en minuscules pour la recherche
+    text = (str(row.get('title', '')) + ' ' + str(row.get('description', ''))).lower()
+
+    # Parcourir chaque categorie et tester ses mots-cles
+    for category, keywords in THREAT_KEYWORDS.items():
+        for kw in keywords:
+            if kw in text:
+                # Retourner la premiere categorie trouvee
+                return category
+
+    # Aucun mot-cle trouve : classer en "general"
+    return 'general'
+
+
+# ---------------------------------------------------
+# 6. CREATION DES COLONNES UTILES
+# ---------------------------------------------------
 def add_columns(df):
     """
     Ajoute deux colonnes metier pour les KPIs du dashboard Streamlit.
@@ -335,7 +363,7 @@ def add_columns(df):
       --> Alimente le KPI "qualite des sources"
 
     CREE : category
-      --> Type de menace detecte par recherche de mots-cles dans title + description
+      --> Type de menace detecte par detect_category() sur title + description
       --> Valeurs possibles : ransomware, phishing, vulnerability, malware,
                               apt, ddos, data_breach, supply_chain, general
       --> Utilise le dictionnaire THREAT_KEYWORDS defini en haut du fichier
@@ -344,21 +372,7 @@ def add_columns(df):
     # NOUVELLE COLONNE content_length : longueur de la description nettoyee
     df['content_length'] = df['description'].str.len()
 
-    # NOUVELLE COLONNE category : detection du type de menace par mots-cles
-    def detect_category(row):
-        # Concatener title + description en minuscules pour la recherche
-        text = (str(row.get('title', '')) + ' ' + str(row.get('description', ''))).lower()
-
-        # Parcourir chaque categorie et tester ses mots-cles
-        for category, keywords in THREAT_KEYWORDS.items():
-            for kw in keywords:
-                if kw in text:
-                    # Retourner la premiere categorie trouvee
-                    return category
-
-        # Aucun mot-cle trouve : classer en "general"
-        return 'general'
-
+    # NOUVELLE COLONNE category : appel de detect_category() au niveau module
     df['category'] = df.apply(detect_category, axis=1)
 
     # Afficher la distribution des categories pour verification

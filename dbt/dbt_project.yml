@@ -1,0 +1,16 @@
+name: cyberpulse
+version: "1.0.0"
+config-version: 2
+
+profile: cyberpulse
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  cyberpulse:
+    staging:
+      +materialized: view
+    mart:
+      +materialized: table
