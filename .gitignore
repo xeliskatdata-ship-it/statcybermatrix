@@ -45,3 +45,6 @@ Thumbs.db
 *.bak
 *.tmp
 *.origdata/
+
+# Dossier data complet
+data/
