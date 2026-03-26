@@ -13,7 +13,7 @@ from load_to_db import main as run_load
 with DAG(
     dag_id="cyberpulse_daily_pipeline",
     start_date=datetime(2026, 3, 24),
-    schedule_interval="0 6 * * *",
+    schedule_interval="0 * * * *",   # toutes les heures
     catchup=False,
     default_args={
         "retries": 2,

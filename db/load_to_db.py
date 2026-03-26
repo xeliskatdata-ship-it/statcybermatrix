@@ -16,7 +16,6 @@ from datetime import datetime
 # 1. Connexion a PostgreSQL
 # ──────────────────────────────────────────────
 
-# load_dotenv() ne fait rien si .env est absent (container Airflow) — OK
 load_dotenv()
 
 DB_USER     = os.getenv("POSTGRES_USER")
@@ -25,7 +24,6 @@ DB_NAME     = os.getenv("POSTGRES_DB")
 DB_HOST     = os.getenv("POSTGRES_HOST", "postgres")
 DB_PORT     = os.getenv("POSTGRES_PORT", "5432")
 
-# Validation : on échoue tôt avec un message clair si une variable manque
 _MISSING = [
     name for name, val in {
         "POSTGRES_USER":     DB_USER,
@@ -75,7 +73,7 @@ RAW_COLS = ["source", "title", "description", "url", "published_at", "collected_
 def load_raw(engine):
     """
     Charge tous les CSV de data/raw/ dans la table raw_articles.
-    Insere ligne par ligne pour ne pas bloquer sur un doublon.
+    ON CONFLICT (url) DO NOTHING evite les doublons sur URL.
     """
     files = glob.glob("data/raw/articles_*.csv")
 
@@ -108,6 +106,7 @@ def load_raw(engine):
                                 (source, title, description, url, published_at, collected_at)
                             VALUES
                                 (:source, :title, :description, :url, :published_at, :collected_at)
+                            ON CONFLICT (url) DO NOTHING
                         """),
                         row.to_dict()
                     )
@@ -135,7 +134,7 @@ STG_COLS = [
 def load_stg(engine):
     """
     Charge tous les CSV de data/cleaned/ dans stg_articles.
-    La contrainte UNIQUE sur url empeche les doublons automatiquement.
+    WHERE NOT EXISTS (title, source) evite les doublons.
     """
     files = glob.glob("data/cleaned/articles_cleaned_*.csv")
 
@@ -176,11 +175,14 @@ def load_stg(engine):
                                 (source, title, description, url,
                                  published_at, collected_at,
                                  published_date, content_length, category)
-                            VALUES
-                                (:source, :title, :description, :url,
-                                 :published_at, :collected_at,
-                                 :published_date, :content_length, :category)
-                            ON CONFLICT (url) DO NOTHING
+                            SELECT
+                                :source, :title, :description, :url,
+                                :published_at, :collected_at,
+                                :published_date, :content_length, :category
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM stg_articles
+                                WHERE title = :title AND source = :source
+                            )
                         """),
                         row.to_dict()
                     )
@@ -208,9 +210,12 @@ def check_counts(engine):
 
     with engine.connect() as conn:
         for table in ["raw_articles", "stg_articles", "mart_kpis"]:
-            result = conn.execute(text(f"SELECT COUNT(*) FROM {table}"))
-            count = result.scalar()
-            print(f"  {table:<20} : {count} lignes")
+            try:
+                result = conn.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                count = result.scalar()
+                print(f"  {table:<20} : {count} lignes")
+            except Exception:
+                print(f"  {table:<20} : table non trouvee")
 
     print("-" * 45)
 

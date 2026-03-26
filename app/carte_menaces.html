@@ -81,7 +81,6 @@
       }
     }
 
-    /* NAV */
     nav {
       position: fixed;
       top: 0;
@@ -128,7 +127,6 @@
       color: var(--text)
     }
 
-    /* MAP — occupe tout sauf nav + sidebar gauche + panneau droit */
     #map {
       position: fixed;
       top: 48px;
@@ -138,7 +136,6 @@
       z-index: 1
     }
 
-    /* SIDEBAR GAUCHE */
     #sidebar {
       position: fixed;
       top: 48px;
@@ -257,7 +254,6 @@
       color: var(--muted)
     }
 
-    /* PANNEAU DROIT */
     #right-panel {
       position: fixed;
       top: 48px;
@@ -291,7 +287,6 @@
       gap: 6px
     }
 
-    /* DEFCON */
     .defcon-row {
       display: flex;
       gap: 5px;
@@ -324,7 +319,6 @@
       margin-top: 3px
     }
 
-    /* STATS */
     .stats-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -353,7 +347,6 @@
       margin-top: 1px
     }
 
-    /* TICKER */
     .ticker-wrap {
       overflow: hidden;
       height: 18px;
@@ -388,7 +381,6 @@
       flex-shrink: 0
     }
 
-    /* BARRES MENACES */
     .threat-row {
       margin-bottom: 4px
     }
@@ -422,7 +414,6 @@
       transition: width .5s ease
     }
 
-    /* PAYS SCORES */
     .pscore-row {
       display: flex;
       align-items: center;
@@ -461,7 +452,6 @@
       border-radius: 2px
     }
 
-    /* YOUTUBE */
     .yt-tabs {
       display: flex;
       gap: 5px;
@@ -486,7 +476,6 @@
       border-color: var(--blue)
     }
 
-    /* POPUP */
     .cyber-popup .leaflet-popup-content-wrapper {
       background: rgba(10, 22, 40, .97);
       border: 1px solid var(--border);
@@ -536,7 +525,6 @@
       color: #93c5fd
     }
 
-    /* TIMELINE */
     #timeline {
       position: fixed;
       bottom: 16px;
@@ -572,7 +560,6 @@
       border-color: var(--blue)
     }
 
-    /* LEGENDE */
     #legend {
       position: fixed;
       bottom: 16px;
@@ -613,7 +600,6 @@
     </div>
   </nav>
 
-  <!-- SIDEBAR GAUCHE -->
   <div id="sidebar">
     <div class="sb-section">
       <div class="sb-title">Categories</div>
@@ -622,7 +608,7 @@
           <div class="layer-dot" style="background:#ef4444;box-shadow:0 0 5px #ef4444"></div>
           <div>
             <div class="layer-name">Failles & Exploits</div>
-            <div class="layer-count" id="c-failles">74 evt</div>
+            <div class="layer-count" id="c-failles">74 art</div>
           </div>
         </div>
         <div class="toggle on" id="tgl-failles"></div>
@@ -632,7 +618,7 @@
           <div class="layer-dot" style="background:#3b82f6;box-shadow:0 0 5px #3b82f6"></div>
           <div>
             <div class="layer-name">Infrastructures</div>
-            <div class="layer-count" id="c-infra">61 evt</div>
+            <div class="layer-count" id="c-infra">61 art</div>
           </div>
         </div>
         <div class="toggle on" id="tgl-infra"></div>
@@ -642,7 +628,7 @@
           <div class="layer-dot" style="background:#f59e0b;box-shadow:0 0 5px #f59e0b"></div>
           <div>
             <div class="layer-name">Editeurs critiques</div>
-            <div class="layer-count" id="c-editeurs">81 evt</div>
+            <div class="layer-count" id="c-editeurs">81 art</div>
           </div>
         </div>
         <div class="toggle on" id="tgl-editeurs"></div>
@@ -652,7 +638,7 @@
           <div class="layer-dot" style="background:#a855f7;box-shadow:0 0 5px #a855f7"></div>
           <div>
             <div class="layer-name">Groupes & APT</div>
-            <div class="layer-count" id="c-menaces">31 evt</div>
+            <div class="layer-count" id="c-menaces">31 art</div>
           </div>
         </div>
         <div class="toggle on" id="tgl-menaces"></div>
@@ -742,27 +728,23 @@
     </div>
   </div>
 
-  <!-- CARTE -->
   <div id="map"></div>
 
-  <!-- PANNEAU DROIT -->
   <div id="right-panel">
-
     <div class="rp-section">
       <div class="rp-title"><span class="live-dot"></span>Niveau d'alerte cyber</div>
       <div class="defcon-row" id="defcon-row"></div>
       <div class="defcon-lbl" id="defcon-lbl"></div>
     </div>
-
     <div class="rp-section">
       <div class="rp-title">Statistiques live</div>
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-n">897</div>
+          <div class="stat-n" id="n-articles">897</div>
           <div class="stat-l">Articles</div>
         </div>
         <div class="stat-card">
-          <div class="stat-n">44</div>
+          <div class="stat-n" id="n-sources">44</div>
           <div class="stat-l">Sources</div>
         </div>
         <div class="stat-card">
@@ -775,34 +757,28 @@
         </div>
       </div>
     </div>
-
     <div class="rp-section">
       <div class="rp-title"><span class="live-dot"></span>Actualites en direct</div>
       <div class="ticker-wrap">
         <div class="ticker" id="ticker"></div>
       </div>
     </div>
-
     <div class="rp-section">
       <div class="rp-title">Top menaces</div>
       <div id="threats-list"></div>
     </div>
-
     <div class="rp-section">
       <div class="rp-title">Instabilite par pays</div>
       <div id="countries-rp"></div>
     </div>
-
     <div class="rp-section" style="flex:1;min-height:0;display:flex;flex-direction:column">
       <div class="rp-title">Chaines cyber — YouTube</div>
       <div class="yt-tabs" id="yt-tabs"></div>
       <iframe id="yt-frame" width="100%" style="flex:1;min-height:120px" src="https://www.youtube.com/embed/wrYXYelJXi4"
         frameborder="0" allowfullscreen style="border-radius:6px;display:block"></iframe>
     </div>
-
   </div>
 
-  <!-- TIMELINE -->
   <div id="timeline">
     <span style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted)">Periode</span>
     <button class="tl-btn active" onclick="setRange(this)">24h</button>
@@ -811,7 +787,6 @@
     <button class="tl-btn" onclick="setRange(this)">Tout</button>
   </div>
 
-  <!-- LEGENDE -->
   <div id="legend">
     <div
       style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.12em;color:var(--muted);margin-bottom:6px;text-transform:uppercase">
@@ -832,45 +807,8 @@
 
   <script>
     const EVENTS = [
-      { cat: 'failles', lat: 38.9, lon: -77.0, country: 'USA', title: 'CVE-2026-2413 — RCE Apache', kw: ['rce', 'zero-day', 'apache'], severity: 'critical', source: 'CISA Alerts' },
-      { cat: 'failles', lat: 51.5, lon: -0.1, country: 'UK', title: 'CVE-2025-68613 — LPE Windows', kw: ['lpe', 'windows', 'exploit'], severity: 'high', source: 'SANS ISC' },
-      { cat: 'failles', lat: 48.8, lon: 2.3, country: 'France', title: 'SQL Injection — serveurs FR', kw: ['sql injection', 'exploit'], severity: 'medium', source: 'ANSSI' },
-      { cat: 'failles', lat: 52.5, lon: 13.4, country: 'Allemagne', title: 'Buffer Overflow — routeurs', kw: ['buffer overflow', 'iot'], severity: 'high', source: 'CERT-EU' },
-      { cat: 'failles', lat: 35.7, lon: 139.7, country: 'Japon', title: 'Zero-day — Cisco', kw: ['zero-day', 'cisco', 'rce'], severity: 'critical', source: 'Threatpost' },
-      { cat: 'failles', lat: 37.5, lon: 127.0, country: 'Coree du Sud', title: 'Supply Chain Attack npm', kw: ['supply chain', 'npm'], severity: 'high', source: 'Bleeping' },
-      { cat: 'failles', lat: 1.3, lon: 103.8, country: 'Singapour', title: 'XSS massif SaaS', kw: ['xss', 'saas'], severity: 'medium', source: 'Dark Reading' },
-      { cat: 'failles', lat: 45.5, lon: -73.6, country: 'Canada', title: 'Data Breach — sante', kw: ['data breach', 'pii'], severity: 'critical', source: 'BleepingComputer' },
-      { cat: 'failles', lat: -33.9, lon: 151.2, country: 'Australie', title: 'CVE-2026-3909 — Fortinet', kw: ['fortinet', 'cve'], severity: 'high', source: 'Krebs' },
-      { cat: 'failles', lat: 55.7, lon: 37.6, country: 'Russie', title: 'Leaked credentials telecom', kw: ['leaked credentials'], severity: 'medium', source: 'Securelist' },
-      { cat: 'failles', lat: 28.6, lon: 77.2, country: 'Inde', title: 'MitM — transactions', kw: ['mitm', 'financial'], severity: 'high', source: 'Mandiant' },
-      { cat: 'failles', lat: 31.2, lon: 121.5, country: 'Chine', title: '0-day — Oracle Database', kw: ['0-day', 'oracle'], severity: 'critical', source: 'Securelist' },
-      { cat: 'infra', lat: 37.4, lon: -122.1, country: 'USA', title: 'AWS S3 Misconfiguration', kw: ['aws', 's3 bucket'], severity: 'critical', source: 'Shodan' },
-      { cat: 'infra', lat: 50.1, lon: 8.7, country: 'Allemagne', title: 'Azure AD compromis', kw: ['azure ad', 'active directory'], severity: 'high', source: 'We Live Security' },
-      { cat: 'infra', lat: 48.2, lon: 16.4, country: 'Autriche', title: 'Kubernetes escape', kw: ['kubernetes', 'docker'], severity: 'high', source: 'Trend Micro' },
-      { cat: 'infra', lat: 59.9, lon: 10.7, country: 'Norvege', title: 'VPN Gateway compromise', kw: ['vpn', 'firewall'], severity: 'critical', source: 'CERT-EU' },
-      { cat: 'infra', lat: 40.4, lon: -3.7, country: 'Espagne', title: 'DNS Tunneling gouvernement', kw: ['dns tunneling'], severity: 'medium', source: 'CrowdStrike' },
-      { cat: 'infra', lat: 35.7, lon: 51.4, country: 'Iran', title: 'SCADA compromis', kw: ['scada', 'ics'], severity: 'critical', source: 'Citizen Lab' },
-      { cat: 'infra', lat: 30.0, lon: 31.2, country: 'Egypte', title: 'SD-WAN vulnerable', kw: ['sd-wan', 'network'], severity: 'medium', source: 'SecurityWeek' },
-      { cat: 'infra', lat: -23.5, lon: -46.6, country: 'Bresil', title: 'GCP misconfigured', kw: ['gcp', 'google cloud'], severity: 'high', source: 'GreyNoise' },
-      { cat: 'infra', lat: 41.0, lon: 29.0, country: 'Turquie', title: 'Linux Kernel exploit', kw: ['linux kernel'], severity: 'high', source: 'Malwarebytes' },
-      { cat: 'editeurs', lat: 47.6, lon: -122.3, country: 'USA', title: 'Microsoft Exchange exploit', kw: ['exchange', 'microsoft'], severity: 'critical', source: 'The Hacker News' },
-      { cat: 'editeurs', lat: 37.3, lon: -121.9, country: 'USA', title: 'VMware ESXi ransomware', kw: ['vmware', 'esxi'], severity: 'critical', source: 'BleepingComputer' },
-      { cat: 'editeurs', lat: 43.7, lon: -79.4, country: 'Canada', title: 'Citrix Bleed session hijack', kw: ['citrix', 'session'], severity: 'high', source: 'SANS ISC' },
-      { cat: 'editeurs', lat: 53.3, lon: -6.3, country: 'Irlande', title: 'Atlassian Confluence RCE', kw: ['confluence', 'atlassian'], severity: 'critical', source: 'VulnCheck' },
-      { cat: 'editeurs', lat: 48.1, lon: 11.6, country: 'Allemagne', title: 'SAP vulnerabilite critique', kw: ['sap', 'enterprise'], severity: 'high', source: 'Proofpoint' },
-      { cat: 'editeurs', lat: 35.2, lon: 136.9, country: 'Japon', title: 'Cisco IOS exploit', kw: ['cisco', 'ios'], severity: 'critical', source: 'Mandiant' },
-      { cat: 'editeurs', lat: 51.1, lon: 17.0, country: 'Pologne', title: 'Salesforce data exposure', kw: ['salesforce'], severity: 'medium', source: 'Censys' },
-      { cat: 'editeurs', lat: 60.2, lon: 24.9, country: 'Finlande', title: 'F5 Networks vuln', kw: ['f5', 'network'], severity: 'high', source: 'AttackerKB' },
-      { cat: 'editeurs', lat: 22.3, lon: 114.2, country: 'Hong Kong', title: 'Palo Alto firewall bypass', kw: ['palo alto', 'firewall'], severity: 'high', source: 'CrowdStrike' },
-      { cat: 'menaces', lat: 55.7, lon: 37.6, country: 'Russie', title: 'APT28 campagne phishing Europe', kw: ['apt28', 'fancy bear'], severity: 'critical', source: 'Mandiant' },
-      { cat: 'menaces', lat: 39.0, lon: 125.7, country: 'Coree du Nord', title: 'Lazarus Group crypto heist', kw: ['lazarus', 'crypto'], severity: 'critical', source: 'CrowdStrike' },
-      { cat: 'menaces', lat: 31.2, lon: 121.5, country: 'Chine', title: 'Volt Typhoon infrastructure US', kw: ['volt typhoon', 'ics'], severity: 'critical', source: 'CISA Alerts' },
-      { cat: 'menaces', lat: 51.5, lon: -0.1, country: 'UK', title: 'LockBit hopitaux NHS', kw: ['lockbit', 'ransomware'], severity: 'critical', source: 'The Record' },
-      { cat: 'menaces', lat: 48.8, lon: 2.3, country: 'France', title: 'Scattered Spider telecom FR', kw: ['scattered spider'], severity: 'high', source: 'Krebs' },
-      { cat: 'menaces', lat: 50.4, lon: 30.5, country: 'Ukraine', title: 'Sandworm energie', kw: ['sandworm', 'wiper'], severity: 'critical', source: 'Citizen Lab' },
-      { cat: 'menaces', lat: 32.1, lon: 34.8, country: 'Israel', title: 'IoC Charming Kitten', kw: ['charming kitten', 'ioc'], severity: 'high', source: 'Securelist' },
-      { cat: 'menaces', lat: 19.4, lon: -99.1, country: 'Mexique', title: 'Infostealer bancaire', kw: ['infostealer', 'trojan'], severity: 'medium', source: 'OCCRP' },
-      { cat: 'menaces', lat: 3.1, lon: 101.7, country: 'Malaisie', title: 'Botnet 50k appareils IoT', kw: ['botnet', 'iot'], severity: 'high', source: 'Abuse.ch' },
+      { cat: 'failles', lat: 38.9, lon: -77.0, country: 'USA', title: 'CVE-2026-2413 — RCE Apache', kw: ['rce', 'zero-day', 'apache'], severity: 'critical', source: 'CISA Alerts', org_cible: '', url: '' },
+      { cat: 'menaces', lat: 55.7, lon: 37.6, country: 'Russie', title: 'APT28 campagne phishing Europe', kw: ['apt28', 'phishing'], severity: 'critical', source: 'Mandiant Blog', org_cible: 'APT28', url: '' },
     ];
 
     const CFG = {
@@ -883,11 +821,12 @@
     const layerState = { failles: true, infra: true, editeurs: true, menaces: true };
     const layerGroups = {};
 
-    // CARTE
     const map = L.map('map', { center: [25, 15], zoom: 2, zoomControl: false, attributionControl: false, minZoom: 2 });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      attribution: '&copy; Stadia Maps &copy; OpenMapTiles &copy; OpenStreetMap'
+    }).addTo(map);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
-
     Object.keys(CFG).forEach(k => { layerGroups[k] = L.layerGroup().addTo(map); });
 
     function mkMarker(ev) {
@@ -900,12 +839,22 @@
       });
       const kws = ev.kw.map(k => `<span>${k}</span>`).join('');
       const dateStr = ev.ts ? new Date(ev.ts).toLocaleDateString('fr-FR') : '—';
+      const titleHtml = ev.url
+        ? `<a href="${ev.url}" target="_blank" style="color:var(--text);text-decoration:underline;text-underline-offset:3px;">${ev.title}</a>`
+        : ev.title;
+      const menace = ev.kw && ev.kw.length > 0 ? ev.kw[0] : '';
+      const menaceLine = menace
+        ? ev.org_cible
+          ? `<div class="pp-meta" style="color:#f59e0b;margin-top:3px">Menace : ${menace} · ${ev.org_cible}</div>`
+          : `<div class="pp-meta" style="color:#f59e0b;margin-top:3px">Menace : ${menace}</div>`
+        : '';
       return L.marker([ev.lat, ev.lon], { icon })
-        .bindPopup(L.popup({ className: 'cyber-popup', maxWidth: 260 }).setContent(
+        .bindPopup(L.popup({ className: 'cyber-popup', maxWidth: 280 }).setContent(
           `<div style="padding:4px">
         <div class="pp-cat" style="color:${c}">${CFG[ev.cat].label}</div>
-        <div class="pp-title">${ev.title}</div>
-        <div class="pp-meta">${ev.country} · ${ev.source} · ${dateStr}</div>
+        <div class="pp-title">${titleHtml}</div>
+        <div class="pp-meta">Pays attaqué : ${ev.country} · Source : ${ev.source} · ${dateStr}</div>
+        ${menaceLine}
         <div class="pp-kw">${kws}</div>
       </div>`
         ));
@@ -916,8 +865,10 @@
       'Allemagne': '🇩🇪', 'Ukraine': '🇺🇦', 'Japon': '🇯🇵', 'Iran': '🇮🇷', 'Inde': '🇮🇳',
       'Canada': '🇨🇦', 'Australie': '🇦🇺', 'Bresil': '🇧🇷', 'Turquie': '🇹🇷', 'Israel': '🇮🇱',
       'Espagne': '🇪🇸', 'Pologne': '🇵🇱', 'Norvege': '🇳🇴', 'Singapour': '🇸🇬', 'UAE': '🇦🇪',
-      'Malaisie': '🇲🇾', 'Mexique': '🇲🇽', 'Coree': '🇰🇷', 'Autriche': '🇦🇹', 'Finlande': '🇫🇮',
-      'Irlande': '🇮🇪', 'Hong': '🇭🇰', 'Egypte': '🇪🇬'
+      'Malaisie': '🇲🇾', 'Mexique': '🇲🇽', 'Coree du Sud': '🇰🇷', 'Autriche': '🇦🇹', 'Finlande': '🇫🇮',
+      'Irlande': '🇮🇪', 'Hong Kong': '🇭🇰', 'Egypte': '🇪🇬', 'Slovenie': '🇸🇮', 'Slovaquie': '🇸🇰',
+      'Belgique': '🇧🇪', 'Suisse': '🇨🇭', 'Suede': '🇸🇪', 'Danemark': '🇩🇰', 'Pays-Bas': '🇳🇱',
+      'Italie': '🇮🇹', 'Europe': '🇪🇺'
     };
     const cColors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#06b6d4', '#ec4899'];
     const dc = { 1: '#ef4444', 2: '#f97316', 3: '#f59e0b', 4: '#3b82f6', 5: '#22c55e' };
@@ -927,64 +878,54 @@
     };
 
     function renderEvents(evts) {
-      // Clear and re-populate map layers
       Object.keys(layerGroups).forEach(k => layerGroups[k].clearLayers());
-      evts.forEach(ev => {
-        const m = mkMarker(ev);
-        m._ev = ev;
-        layerGroups[ev.cat].addLayer(m);
-      });
+      evts.forEach(ev => { const m = mkMarker(ev); m._ev = ev; layerGroups[ev.cat].addLayer(m); });
 
-      // Nav bar stats
       const nC = new Set(evts.map(e => e.country)).size;
+      const nSrc = new Set(evts.map(e => e.source)).size;
+      const nCritEvts = evts.filter(e => e.severity === 'critical').length;
       document.getElementById('n-events').textContent = evts.length;
       document.getElementById('n-countries').textContent = nC;
+      const elArt = document.getElementById('n-articles'); if (elArt) elArt.textContent = evts.length;
+      const elSrc = document.getElementById('n-sources'); if (elSrc) elSrc.textContent = nSrc;
+      const elCrit = document.getElementById('n-crit'); if (elCrit) elCrit.textContent = nCritEvts;
 
-      // Sidebar countries
       const cc = {};
       evts.forEach(e => { cc[e.country] = (cc[e.country] || 0) + 1; });
       const topC = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 8);
       const maxC = topC[0]?.[1] || 1;
       document.getElementById('sb-countries').innerHTML = topC.map(([c, n]) =>
-        `<div class="country-row">
-      <span style="font-size:12px">${flags[c] || '🌐'} ${c}</span>
-      <span class="country-n">${n}</span>
-    </div>`).join('');
+        `<div class="country-row"><span style="font-size:12px">${flags[c] || '🌐'} ${c}</span><span class="country-n">${n}</span></div>`).join('');
 
-      // DEFCON
-      const crits = evts.filter(e => e.severity === 'critical').length;
-      document.getElementById('n-crit').textContent = crits;
-      const dl = crits >= 15 ? 1 : crits >= 10 ? 2 : crits >= 6 ? 3 : crits >= 3 ? 4 : 5;
-      const dr = document.getElementById('defcon-row');
-      dr.innerHTML = '';
+      const dl = nCritEvts >= 15 ? 1 : nCritEvts >= 10 ? 2 : nCritEvts >= 6 ? 3 : nCritEvts >= 3 ? 4 : 5;
+      const dr = document.getElementById('defcon-row'); dr.innerHTML = '';
       for (let i = 1; i <= 5; i++) {
-        const b = document.createElement('div'); b.className = 'defcon-btn' + (i === dl ? ' active' : '');
-        b.textContent = i;
+        const b = document.createElement('div'); b.className = 'defcon-btn' + (i === dl ? ' active' : ''); b.textContent = i;
         if (i === dl) { b.style.background = dc[i] + '22'; b.style.borderColor = dc[i]; b.style.color = dc[i]; }
         dr.appendChild(b);
       }
       document.getElementById('defcon-lbl').textContent = dlbl[dl];
       document.getElementById('defcon-lbl').style.color = dc[dl];
 
-      // Top menaces
       const tc = {};
       evts.forEach(e => e.kw.forEach(k => { tc[k] = (tc[k] || 0) + 1; }));
       const topT = Object.entries(tc).sort((a, b) => b[1] - a[1]).slice(0, 8);
       const maxT = topT[0]?.[1] || 1;
       document.getElementById('threats-list').innerHTML = topT.map(([k, n], i) =>
         `<div class="threat-row">
-      <div class="threat-top"><span class="threat-name">${k}</span><span class="threat-val">${n}</span></div>
-      <div class="threat-bar"><div class="threat-fill" style="width:${Math.round(n / maxT * 100)}%;background:${cColors[i % cColors.length]}"></div></div>
-    </div>`).join('');
+          <div class="threat-top"><span class="threat-name">${k}</span><span class="threat-val">${n}</span></div>
+          <div class="threat-bar"><div class="threat-fill" style="width:${Math.round(n / maxT * 100)}%;background:${cColors[i % cColors.length]}"></div></div>
+        </div>`).join('');
 
-      // Right panel countries
       document.getElementById('countries-rp').innerHTML = topC.map(([c, n], i) =>
         `<div class="pscore-row">
-      <span class="pflag">${flags[c] || '🌐'}</span>
-      <span class="pname">${c}</span>
-      <span class="pn">${n}</span>
-      <div class="pbar"><div class="pbar-fill" style="width:${Math.round(n / maxC * 100)}%;background:${cColors[i % cColors.length]}"></div></div>
-    </div>`).join('');
+          <span class="pflag">${flags[c] || '🌐'}</span>
+          <span class="pname">${c}</span>
+          <span class="pn">${n}</span>
+          <div class="pbar"><div class="pbar-fill" style="width:${Math.round(n / maxC * 100)}%;background:${cColors[i % cColors.length]}"></div></div>
+        </div>`).join('');
+
+      document.getElementById('n-layers').textContent = Object.values(layerState).filter(Boolean).length;
     }
 
     function toggleLayer(cat) {
@@ -1008,10 +949,8 @@
       renderEvents(filtered);
     }
 
-    // Initial render via active button (default: 24h)
     setRange(document.querySelector('.tl-btn.active'));
 
-    // TICKER — initialised once with all events, not date-filtered
     const tk = document.getElementById('ticker');
     const items = [...EVENTS, ...EVENTS];
     items.forEach(e => {
@@ -1020,22 +959,18 @@
       tk.appendChild(el);
     });
 
-    // YOUTUBE
     const YT = [
-      { label: 'CNN Inter', url: 'https://www.youtube.com/embed/wrYXYelJXi4' },
-      { label: 'Underscore_', url: 'https://www.youtube.com/embed/OxSUNLTj-l8' },
+      {label: 'ANSSI', url: 'https://www.youtube.com/embed/wHCu670g0wo' },  
+      { label: 'Cybernews FR', url: 'https://www.youtube.com/embed/koRzY8hU-L0' },
       { label: 'Bellingcat', url: 'https://www.youtube.com/embed/DyQyHt4LNKM' },
+      
     ];
     const ytTabs = document.getElementById('yt-tabs');
     const ytFrame = document.getElementById('yt-frame');
     YT.forEach((ch, i) => {
       const b = document.createElement('button');
       b.className = 'yt-tab' + (i === 0 ? ' active' : ''); b.textContent = ch.label;
-      b.onclick = () => {
-        ytFrame.src = ch.url;
-        ytTabs.querySelectorAll('.yt-tab').forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-      };
+      b.onclick = () => { ytFrame.src = ch.url; ytTabs.querySelectorAll('.yt-tab').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
       ytTabs.appendChild(b);
     });
   </script>

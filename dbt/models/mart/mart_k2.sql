@@ -1,10 +1,8 @@
 -- K2 -- Occurrences des mots-clés cyber par catégorie et période glissante
 -- Colonnes produites : keyword, category, sub_category,
---                      period_days (3/7/15/30), occurrences, article_count
+--                      period_days (3/7/15/30), occurrences, article_count, source_count
 
-{
-{ config
-(materialized='table') }}
+{{ config(materialized='table') }}
 
 WITH
     kw_list
@@ -107,6 +105,7 @@ WITH
     (
         SELECT
             id,
+            source,
             published_date,
             LOWER(COALESCE(title, '') || ' ' || COALESCE(description, '')) AS corpus
         FROM {{ ref
@@ -114,7 +113,6 @@ WITH
     WHERE published_date IS NOT NULL
 ),
 
--- Articles correspondant à chaque mot-clé (inner join → seuls les articles matchés)
 matched AS
 (
     SELECT
@@ -122,18 +120,16 @@ matched AS
     k.category,
     k.sub_category,
     a.id,
+    a.source,
     a.published_date,
-    -- Nombre d'occurrences du mot-clé dans le corpus de l'article
     (
             LENGTH(a.corpus)
             - LENGTH(REPLACE(a.corpus, k.keyword, ''))
-        ) / NULLIF(LENGTH(k.keyword), 0)  AS occ_in_doc
+        ) / NULLIF(LENGTH(k.keyword), 0) AS occ_in_doc
 FROM kw_list k
     JOIN articles_base a ON a.corpus LIKE '%' || k.keyword || '%'
 )
 
--- Agrégation par mot-clé × période
--- LEFT JOIN depuis kw_list garantit les lignes à 0 pour les mots absents
 SELECT
     k.keyword,
     k.category,
@@ -148,13 +144,20 @@ SELECT
             END
         )::INT,
         0
-    )                    AS occurrences,
+    )                       AS occurrences,
     COUNT(
         DISTINCT CASE
             WHEN m.published_date >= CURRENT_DATE - (p.period_days || ' days')::INTERVAL
             THEN m.id
         END
-    )                    AS article_count
+    )                       AS article_count,
+    -- ↓ NOUVEAU : nombre de sources distinctes ayant couvert ce mot-clé
+    COUNT(
+        DISTINCT CASE
+            WHEN m.published_date >= CURRENT_DATE - (p.period_days || ' days')::INTERVAL
+            THEN m.source
+        END
+    )                       AS source_count
 FROM kw_list k
 CROSS JOIN (VALUES
         (3),

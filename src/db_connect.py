@@ -29,18 +29,11 @@ def get_engine():
     return create_engine(DATABASE_URL, pool_pre_ping=True)
 
 
-@st.cache_data(ttl=120)  # Cache 2 minutes -- ajustable
+@st.cache_data(ttl=120)
 def get_mart_k1():
-    """
-    Charge mart_k1 depuis PostgreSQL.
-    Rafraichi automatiquement toutes les 2 minutes.
-    """
     engine = get_engine()
     query = text("""
-        SELECT
-            published_date,
-            source,
-            nb_articles
+        SELECT published_date, source, nb_articles
         FROM mart_k1
         WHERE published_date IS NOT NULL
         ORDER BY published_date DESC
@@ -55,14 +48,14 @@ def get_mart_k1():
 def get_mart_k2():
     """
     Charge mart_k2 depuis PostgreSQL.
-    Colonnes attendues : keyword, category, sub_category,
-                         period_days, occurrences, article_count
+    Colonnes : keyword, category, sub_category,
+               period_days, occurrences, article_count, source_count
     """
     engine = get_engine()
     query = text("""
         SELECT
             keyword, category, sub_category,
-            period_days, occurrences, article_count
+            period_days, occurrences, article_count, source_count
         FROM mart_k2
         ORDER BY period_days, occurrences DESC
     """)
@@ -73,10 +66,6 @@ def get_mart_k2():
 
 @st.cache_data(ttl=120)
 def get_stg_articles(keyword=None, limit=2000):
-    """
-    Charge les articles depuis stg_articles.
-    Si keyword est fourni, filtre sur title + description (ILIKE).
-    """
     engine = get_engine()
     if keyword:
         query = text("""
@@ -112,10 +101,6 @@ def get_stg_articles(keyword=None, limit=2000):
 
 @st.cache_data(ttl=120)
 def get_mart_k3():
-    """
-    Charge mart_k3 depuis PostgreSQL.
-    Colonnes : category, source, nb_articles
-    """
     engine = get_engine()
     query = text("""
         SELECT category, source, nb_articles
@@ -129,10 +114,6 @@ def get_mart_k3():
 
 @st.cache_data(ttl=120)
 def get_mart_k4():
-    """
-    Charge mart_k4 depuis PostgreSQL.
-    Colonnes : published_date, category, nb_mentions
-    """
     engine = get_engine()
     query = text("""
         SELECT published_date, category, nb_mentions
@@ -147,10 +128,6 @@ def get_mart_k4():
 
 @st.cache_data(ttl=120)
 def get_mart_k5():
-    """
-    Charge mart_k5 depuis PostgreSQL.
-    Colonnes : semaine, category, nb_alertes
-    """
     engine = get_engine()
     query = text("""
         SELECT semaine, category, nb_alertes
@@ -165,10 +142,6 @@ def get_mart_k5():
 
 @st.cache_data(ttl=120)
 def get_mart_k6():
-    """
-    Charge mart_k6 depuis PostgreSQL.
-    Colonnes : cve, nb_mentions
-    """
     engine = get_engine()
     query = text("""
         SELECT cve, nb_mentions
