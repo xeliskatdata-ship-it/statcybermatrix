@@ -2,9 +2,7 @@
 -- La catégorisation est calculée ici par regex sur titre+description
 -- car stg_articles.category est NULL (enrichi en amont uniquement si le pipeline NLP tourne)
 
-{
-{ config
-(materialized='table') }}
+{{ config(materialized='table') }}
 
 WITH
     categorized
@@ -39,8 +37,7 @@ WITH
                 THEN 'malware'
             ELSE 'general'
         END AS category
-        FROM {{ ref
-    ('stg_articles') }}
+        FROM {{ ref('stg_articles') }}
     WHERE published_date IS NOT NULL
 )
 

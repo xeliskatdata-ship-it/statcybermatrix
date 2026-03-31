@@ -1,9 +1,7 @@
 -- K4 -- Evolution des mentions par categorie de menace dans le temps
 -- Meme logique de categorisation regex que mart_k3
 
-{
-{ config
-(materialized='table') }}
+{{ config(materialized='table') }}
 
 WITH
     categorized
@@ -38,8 +36,7 @@ WITH
                 THEN 'malware'
             ELSE 'general'
         END AS category
-        FROM {{ ref
-    ('stg_articles') }}
+        FROM {{ ref('stg_articles') }}
     WHERE published_date IS NOT NULL
 )
 

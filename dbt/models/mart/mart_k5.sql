@@ -1,9 +1,7 @@
 -- K5 -- Alertes critiques par semaine et categorie
 -- Meme logique de categorisation regex que mart_k3 et mart_k4
 
-{
-{ config
-(materialized='table') }}
+{{ config(materialized='table') }}
 
 WITH
     categorized
@@ -63,8 +61,7 @@ WITH
                 THEN 'malware'
             ELSE 'general'
 END AS category
-    FROM {{ ref
-('stg_articles') }}
+    FROM {{ ref('stg_articles') }}
     WHERE published_date IS NOT NULL
 )
 

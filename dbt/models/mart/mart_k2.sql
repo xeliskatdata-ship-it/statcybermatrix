@@ -108,8 +108,7 @@ WITH
             source,
             published_date,
             LOWER(COALESCE(title, '') || ' ' || COALESCE(description, '')) AS corpus
-        FROM {{ ref
-    ('stg_articles') }}
+        FROM {{ ref('stg_articles') }}
     WHERE published_date IS NOT NULL
 ),
 

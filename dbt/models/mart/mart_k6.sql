@@ -1,8 +1,6 @@
 -- K6 -- CVE les plus mentionnees dans les articles
 
-{
-{ config
-(materialized='table') }}
+{{ config(materialized='table') }}
 
 WITH
     cve_extraites
@@ -12,8 +10,7 @@ WITH
             t.cve[1]
      AS cve,
         id
-    FROM {{ ref
-('stg_articles') }},
+    FROM {{ ref('stg_articles') }},
     LATERAL regexp_matches
 (
         COALESCE
