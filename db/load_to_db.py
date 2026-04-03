@@ -130,7 +130,7 @@ STG_COLS = [
     "published_at", "collected_at",
     "published_date", "content_length", "category"
 ]
-
+ 
 def load_stg(engine):
     """
     Charge tous les CSV de data/cleaned/ dans stg_articles.

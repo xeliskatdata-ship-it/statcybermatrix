@@ -30,7 +30,7 @@ def get_engine():
 
 
 @st.cache_data(ttl=120)
-def get_mart_k1():
+def get_mart_k1() -> pd.DataFrame:
     engine = get_engine()
     query = text("""
         SELECT published_date, source, nb_articles
@@ -40,12 +40,12 @@ def get_mart_k1():
     """)
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
-    df['published_date'] = pd.to_datetime(df['published_date'])
+    df["published_date"] = pd.to_datetime(df["published_date"])
     return df
 
 
 @st.cache_data(ttl=120)
-def get_mart_k2():
+def get_mart_k2() -> pd.DataFrame:
     """
     Charge mart_k2 depuis PostgreSQL.
     Colonnes : keyword, category, sub_category,
@@ -65,7 +65,7 @@ def get_mart_k2():
 
 
 @st.cache_data(ttl=120)
-def get_stg_articles(keyword=None, limit=2000):
+def get_stg_articles(keyword: str = None, limit: int = 2000) -> pd.DataFrame:
     engine = get_engine()
     if keyword:
         query = text("""
@@ -75,7 +75,7 @@ def get_stg_articles(keyword=None, limit=2000):
             FROM stg_articles
             WHERE published_date IS NOT NULL
               AND (
-                LOWER(title)       LIKE :kw
+                LOWER(title)          LIKE :kw
                 OR LOWER(description) LIKE :kw
               )
             ORDER BY published_date DESC
@@ -95,12 +95,40 @@ def get_stg_articles(keyword=None, limit=2000):
         params = {"limit": limit}
     with engine.connect() as conn:
         df = pd.read_sql(query, conn, params=params)
-    df['published_date'] = pd.to_datetime(df['published_date'])
+    df["published_date"] = pd.to_datetime(df["published_date"])
     return df
 
 
 @st.cache_data(ttl=120)
-def get_mart_k3():
+def get_articles_by_keyword(keyword: str, period_days: int = 7) -> pd.DataFrame:
+    """
+    Retourne les articles de stg_articles mentionnant le mot-cle
+    dans le titre ou la description, sur la periode demandee.
+    Utilisee par KPI 2 au clic sur une bulle du scatter.
+    """
+    engine = get_engine()
+    query = text("""
+        SELECT title, source, url, published_date, category
+        FROM stg_articles
+        WHERE published_date >= NOW() - INTERVAL '1 day' * :days
+          AND (
+            LOWER(title)          LIKE :kw
+            OR LOWER(description) LIKE :kw
+          )
+        ORDER BY published_date DESC
+        LIMIT 50
+    """)
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn, params={
+            "days": period_days,
+            "kw":   f"%{keyword.lower()}%",
+        })
+    df["published_date"] = pd.to_datetime(df["published_date"])
+    return df
+
+
+@st.cache_data(ttl=120)
+def get_mart_k3() -> pd.DataFrame:
     engine = get_engine()
     query = text("""
         SELECT category, source, nb_articles
@@ -113,7 +141,7 @@ def get_mart_k3():
 
 
 @st.cache_data(ttl=120)
-def get_mart_k4():
+def get_mart_k4() -> pd.DataFrame:
     engine = get_engine()
     query = text("""
         SELECT published_date, category, nb_mentions
@@ -122,12 +150,12 @@ def get_mart_k4():
     """)
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
-    df['published_date'] = pd.to_datetime(df['published_date'])
+    df["published_date"] = pd.to_datetime(df["published_date"])
     return df
 
 
 @st.cache_data(ttl=120)
-def get_mart_k5():
+def get_mart_k5() -> pd.DataFrame:
     engine = get_engine()
     query = text("""
         SELECT semaine, category, nb_alertes
@@ -136,12 +164,12 @@ def get_mart_k5():
     """)
     with engine.connect() as conn:
         df = pd.read_sql(query, conn)
-    df['semaine'] = pd.to_datetime(df['semaine'])
+    df["semaine"] = pd.to_datetime(df["semaine"])
     return df
 
 
 @st.cache_data(ttl=120)
-def get_mart_k6():
+def get_mart_k6() -> pd.DataFrame:
     engine = get_engine()
     query = text("""
         SELECT cve, nb_mentions
@@ -162,3 +190,5 @@ def force_refresh():
     get_mart_k5.clear()
     get_mart_k6.clear()
     get_stg_articles.clear()
+    get_articles_by_keyword.clear()
+    

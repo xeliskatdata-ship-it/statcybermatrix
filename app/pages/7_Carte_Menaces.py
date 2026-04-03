@@ -2,6 +2,7 @@
 CyberPulse -- Threat Map
 Articles geo-located by ATTACKED country (spaCy NER), fallback on source origin.
 Victim organisation extracted via semantic regex + spaCy cross-validation.
+Each event carries a confidence score (0–100) + label (forte / moyenne / faible).
 Title is clickable → opens article in new tab.
 """
 
@@ -10,6 +11,7 @@ import pathlib
 import re
 import random
 import sys
+import os
 
 import pandas as pd
 import streamlit as st
@@ -29,10 +31,10 @@ st.markdown("""
 header[data-testid="stHeader"]      { display: none !important; }
 .block-container                     { padding: 0 !important; max-width: 100% !important; }
 [data-testid="stAppViewContainer"]>section { padding: 0 !important; }
-iframe                               { display: block; }
+iframe                               { display: block; height: 100vh !important; width: 100% !important; }
 </style>
 """, unsafe_allow_html=True)
-
+ 
 # ──────────────────────────────────────────────────────────────
 # SPACY — chargement du modèle NER (cache Streamlit)
 # ──────────────────────────────────────────────────────────────
@@ -60,6 +62,11 @@ _VICTIM_PATTERNS = [
     r"targeting\s+(?P<org>[\w][\w\s&,\.']+)",
 ]
 
+_STRONG_CYBER_KW = re.compile(
+    r"ransomware|zero.?day|data\s+breach|\bcve\b|apt|malware|phishing|exploit|backdoor|botnet",
+    re.IGNORECASE,
+)
+
 def _extract_victim(text: str) -> str | None:
     for pat in _VICTIM_PATTERNS:
         m = re.search(pat, text, re.IGNORECASE)
@@ -74,9 +81,10 @@ def _extract_victim(text: str) -> str | None:
     return None
 
 # ──────────────────────────────────────────────────────────────
-# PAYS CIBLES → COORDONNÉES
+# PAYS CIBLES → COORDONNÉES (noms anglais + noms français)
 # ──────────────────────────────────────────────────────────────
 TARGET_GEO: dict[str, tuple[str, float, float]] = {
+    # ── Anglais ───────────────────────────────────────────────
     "United States"  : ("USA",              37.1,  -95.7),
     "US"             : ("USA",              37.1,  -95.7),
     "USA"            : ("USA",              37.1,  -95.7),
@@ -146,6 +154,63 @@ TARGET_GEO: dict[str, tuple[str, float, float]] = {
     "NHS"            : ("UK",               51.5,   -0.1),
     "Europe"         : ("Europe",           54.5,   15.3),
     "NATO"           : ("Europe",           50.8,    4.4),
+    # ── Français ──────────────────────────────────────────────
+    "États-Unis"     : ("USA",              37.1,  -95.7),
+    "Etats-Unis"     : ("USA",              37.1,  -95.7),
+    "Royaume-Uni"    : ("UK",               51.5,   -0.1),
+    "Allemagne"      : ("Allemagne",        52.5,   13.4),
+    "Russie"         : ("Russie",           55.7,   37.6),
+    "Chine"          : ("Chine",            39.9,  116.4),
+    "Corée du Nord"  : ("Corée du Nord",    39.0,  125.7),
+    "Corée du Sud"   : ("Corée du Sud",     35.9,  127.8),
+    "Japon"          : ("Japon",            35.7,  139.7),
+    "Inde"           : ("Inde",             20.6,   78.9),
+    "Israël"         : ("Israël",           31.8,   35.2),
+    "Australie"      : ("Australie",       -25.3,  133.8),
+    "Brésil"         : ("Brésil",          -14.2,  -51.9),
+    "Mexique"        : ("Mexique",          23.6, -102.6),
+    "Espagne"        : ("Espagne",          40.5,   -3.7),
+    "Italie"         : ("Italie",           41.9,   12.6),
+    "Pologne"        : ("Pologne",          51.9,   19.1),
+    "Pays-Bas"       : ("Pays-Bas",         52.1,    5.3),
+    "Belgique"       : ("Belgique",         50.5,    4.5),
+    "Suisse"         : ("Suisse",           46.8,    8.2),
+    "Suède"          : ("Suède",            60.1,   18.6),
+    "Norvège"        : ("Norvège",          60.5,    8.5),
+    "Finlande"       : ("Finlande",         61.9,   25.7),
+    "Danemark"       : ("Danemark",         56.3,    9.5),
+    "Autriche"       : ("Autriche",         47.5,   14.5),
+    "Rép. Tchèque"   : ("Rép. Tchèque",     49.8,   15.5),
+    "Roumanie"       : ("Roumanie",         45.9,   24.9),
+    "Turquie"        : ("Turquie",          38.9,   35.2),
+    "Arabie Saoudite": ("Arabie Saoudite",  23.9,   45.1),
+    "Émirats"        : ("Émirats",          24.0,   54.0),
+    "Singapour"      : ("Singapour",         1.3,  103.8),
+    "Taïwan"         : ("Taïwan",           23.7,  120.9),
+    "Indonésie"      : ("Indonésie",        -0.8,  113.9),
+    "Malaisie"       : ("Malaisie",          4.2,  109.5),
+    "Thaïlande"      : ("Thaïlande",        15.9,  100.9),
+    "Égypte"         : ("Égypte",           26.8,   30.8),
+    "Afrique du Sud" : ("Afrique du Sud",  -30.6,   22.9),
+    "Argentine"      : ("Argentine",       -38.4,  -63.6),
+    "Colombie"       : ("Colombie",          4.6,  -74.1),
+    "Irlande"        : ("Irlande",          53.4,   -8.2),
+    "Grèce"          : ("Grèce",            39.1,   22.0),
+    "Hongrie"        : ("Hongrie",          47.2,   19.5),
+    "Slovaquie"      : ("Slovaquie",        48.7,   19.7),
+    "Slovénie"       : ("Slovénie",         46.2,   14.8),
+    "Croatie"        : ("Croatie",          45.1,   15.2),
+    "Serbie"         : ("Serbie",           44.0,   21.0),
+    "Bulgarie"       : ("Bulgarie",         42.7,   25.5),
+    "Estonie"        : ("Estonie",          58.6,   25.0),
+    "Lettonie"       : ("Lettonie",         56.9,   24.6),
+    "Lituanie"       : ("Lituanie",         55.2,   24.0),
+    "Liban"          : ("Liban",            33.9,   35.5),
+    "Maroc"          : ("Maroc",            31.8,   -7.1),
+    "Algérie"        : ("Algérie",          28.0,    1.7),
+    "Tunisie"        : ("Tunisie",          33.9,    9.6),
+    "Sénégal"        : ("Sénégal",          14.5,  -14.5),
+    "Côte d'Ivoire"  : ("Côte d'Ivoire",     7.5,   -5.5),
 }
 
 # ──────────────────────────────────────────────────────────────
@@ -256,37 +321,142 @@ def _extract_kw(title: str, desc: str) -> list[str]:
 
 
 # ──────────────────────────────────────────────────────────────
+# SCORE DE CONFIANCE
+# ──────────────────────────────────────────────────────────────
+def _compute_confidence(
+    gpe_count: int,
+    has_org: bool,
+    regex_match: bool,
+    spacy_org_match: bool,
+    source_fallback: bool,
+    multiple_gpe: bool,
+    multiple_victims: bool,
+    strong_kw_in_300: bool,
+    has_strong_kw: bool,
+) -> tuple[int, str]:
+    score = 0
+
+    if gpe_count > 0:
+        score += 30
+    if gpe_count > 1:
+        score += 10
+
+    if regex_match:
+        score += 20
+    if spacy_org_match:
+        score += 20
+    if regex_match and spacy_org_match:
+        score += 20
+
+    if has_strong_kw:
+        score += 10
+    if strong_kw_in_300:
+        score += 10
+
+    if source_fallback:
+        score -= 20
+    if not has_org:
+        score -= 15
+    if multiple_gpe:
+        score -= 15
+    if multiple_victims:
+        score -= 10
+
+    score = max(0, min(score, 100))
+
+    if score >= 80:
+        label = "forte"
+    elif score >= 50:
+        label = "moyenne"
+    else:
+        label = "faible"
+
+    return score, label
+
+
+# ──────────────────────────────────────────────────────────────
 # NER — extraction pays cible (spaCy) + victime (regex + validation spaCy)
 # ──────────────────────────────────────────────────────────────
-def extract_target(title: str, desc: str) -> tuple[str | None, float | None, float | None, str | None]:
+def extract_target(
+    title: str, desc: str
+) -> tuple[str | None, float | None, float | None, str | None, int, str]:
+    """
+    Retourne (country, lat, lon, org_cible, confidence_score, confidence_label).
+    Priorité : scan regex titre (FR+EN) → spaCy NER texte[:1000] → fallback source.
+    """
     text = str(title) + ". " + str(desc or "")
+    first_300 = text[:300]
 
     target_country = None
-    target_lat = None
-    target_lon = None
-    org_cible = None
+    target_lat     = None
+    target_lon     = None
+    org_cible      = None
 
+    # ── 1. Scan direct du titre sur TARGET_GEO (noms FR + EN)
+    #    Prioritaire : le titre est la partie la plus fiable et la plus concise
+    for name, geo in TARGET_GEO.items():
+        if re.search(r'\b' + re.escape(name) + r'\b', title, re.IGNORECASE):
+            target_country, target_lat, target_lon = geo
+            break
+
+    # ── 2. Regex victime sur titre puis texte complet
     org_candidate = _extract_victim(title) or _extract_victim(text)
+    regex_match   = org_candidate is not None
+
+    strong_kw_in_300 = bool(_STRONG_CYBER_KW.search(first_300))
+    has_strong_kw    = bool(_STRONG_CYBER_KW.search(text))
+
+    gpe_hits: list[str] = []
+    spacy_orgs: set[str] = set()
+    spacy_org_match = False
 
     if nlp is not None:
-        doc = nlp(text[:500])
+        # Analyse sur les 1000 premiers caractères (au lieu de 500)
+        doc = nlp(text[:1000])
 
         for ent in doc.ents:
-            if ent.label_ == "GPE" and target_country is None:
+            if ent.label_ == "GPE":
                 match = TARGET_GEO.get(ent.text)
                 if match:
-                    target_country, target_lat, target_lon = match
+                    gpe_hits.append(ent.text)
+                    # spaCy complète le scan titre si rien trouvé
+                    if target_country is None:
+                        target_country, target_lat, target_lon = match
 
-        if org_candidate:
-            spacy_orgs = {ent.text for ent in doc.ents if ent.label_ == "ORG"}
-            confirmed = any(
+            elif ent.label_ == "ORG":
+                spacy_orgs.add(ent.text)
+
+        if org_candidate and spacy_orgs:
+            spacy_org_match = any(
                 org.lower() in org_candidate.lower() or
                 org_candidate.lower() in org.lower()
                 for org in spacy_orgs
             )
-            org_cible = org_candidate if confirmed else None
+            org_cible = org_candidate if spacy_org_match else None
 
-    return target_country, target_lat, target_lon, org_cible
+    # gpe_count inclut le match titre s'il n'est pas dans gpe_hits spaCy
+    gpe_count    = len(gpe_hits) + (1 if target_country and not gpe_hits else 0)
+    multiple_gpe = len(gpe_hits) > 1
+    multiple_victims = (
+        len([p for p in _VICTIM_PATTERNS
+             if re.search(p, text, re.IGNORECASE)]) > 2
+    )
+
+    source_fallback = target_country is None
+
+    confidence_score, confidence_label = _compute_confidence(
+        gpe_count        = gpe_count,
+        has_org          = org_cible is not None,
+        regex_match      = regex_match,
+        spacy_org_match  = spacy_org_match,
+        source_fallback  = source_fallback,
+        multiple_gpe     = multiple_gpe,
+        multiple_victims = multiple_victims,
+        strong_kw_in_300 = strong_kw_in_300,
+        has_strong_kw    = has_strong_kw,
+    )
+
+    return target_country, target_lat, target_lon, org_cible, confidence_score, confidence_label
 
 
 # ──────────────────────────────────────────────────────────────
@@ -328,12 +498,12 @@ for _, row in df.iterrows():
     title = str(row.get("title", ""))[:100]
     desc  = str(row.get("description") or "")
 
-    t_country, t_lat, t_lon, org_cible = extract_target(title, desc)
+    t_country, t_lat, t_lon, org_cible, conf_score, conf_label = extract_target(title, desc)
 
     if t_lat is None:
         fallback_country, t_lat, t_lon = SOURCE_GEO[src]
         t_country = fallback_country
-        geo_mode = "source"
+        geo_mode  = "source"
     else:
         geo_mode = "target"
 
@@ -355,18 +525,20 @@ for _, row in df.iterrows():
     ts = pub_date.isoformat() if pd.notna(pub_date) else None
 
     events.append({
-        "cat"      : layer,
-        "lat"      : jlat,
-        "lon"      : jlon,
-        "country"  : t_country,
-        "title"    : title,
-        "kw"       : kw,
-        "severity" : severity,
-        "source"   : src,
-        "org_cible": org_cible or "",
-        "geo_mode" : geo_mode,
-        "ts"       : ts,
-        "url"      : str(row.get("url", "") or ""),
+        "cat"        : layer,
+        "lat"        : jlat,
+        "lon"        : jlon,
+        "country"    : t_country,
+        "title"      : title,
+        "kw"         : kw,
+        "severity"   : severity,
+        "source"     : src,
+        "org_cible"  : org_cible or "",
+        "geo_mode"   : geo_mode,
+        "ts"         : ts,
+        "url"        : str(row.get("url", "") or ""),
+        "conf_score" : conf_score,
+        "conf_label" : conf_label,
     })
 
 # ──────────────────────────────────────────────────────────────
@@ -436,7 +608,6 @@ for layer_key, elem_id in [
         html,
     )
 
-# ── Sources actives (dynamique)
 n_sources_actives = len({e["source"] for e in events})
 html = re.sub(
     r'<div class="sb-title">\d+ Sources actives</div>',
@@ -445,9 +616,16 @@ html = re.sub(
 )
 
 # ──────────────────────────────────────────────────────────────
+# INJECTION TOKEN JAWG — depuis .env via JAWG_TOKEN
+# ──────────────────────────────────────────────────────────────
+jawg_token = os.getenv("JAWG_TOKEN", "")
+html = html.replace("__JAWG_TOKEN__", jawg_token)
+
+# ──────────────────────────────────────────────────────────────
 # RENDER
 # ──────────────────────────────────────────────────────────────
 if df.empty:
     st.warning("No articles in the database — run the acquisition pipeline first.")
 else:
-    components.html(html, height=1080, scrolling=False)
+    components.html(html, height=10000, scrolling=False)
+    

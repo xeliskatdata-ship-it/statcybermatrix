@@ -361,7 +361,7 @@ def add_columns(df):
       --> Longueur de la description en nombre de caracteres
       --> Utile pour filtrer les articles trop courts (peu informatifs)
       --> Alimente le KPI "qualite des sources"
-
+ 
     CREE : category
       --> Type de menace detecte par detect_category() sur title + description
       --> Valeurs possibles : ransomware, phishing, vulnerability, malware,

@@ -4,9 +4,7 @@
 --   ISO     : 2026-03-22T10:00:00Z  ou  2026-03-22 10:00:00
 --   RFC2822 : Tue, 09 Dec 2025 10:00:00 +0000
 
-{
-{ config
-(materialized='view') }}
+{{ config(materialized='view') }}
 
 SELECT
     id,
