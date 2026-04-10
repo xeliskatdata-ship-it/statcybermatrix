@@ -1,3 +1,4 @@
+# v2 sidebar counts
 # db_connect.py -- Connexion PostgreSQL partagee entre toutes les pages KPI
 # Cache TTL 120s via @st.cache_data -- force_refresh() vide tout
 # Dual mode : st.secrets (Streamlit Cloud) ou .env (Docker local)
