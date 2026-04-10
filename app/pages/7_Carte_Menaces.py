@@ -17,7 +17,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "src"))
-from db_connect import get_stg_articles, get_mart_k6, force_refresh
+from db_connect import get_mart_k7, get_stg_articles, force_refresh
 
 st.set_page_config(
     page_title="Carte de veille cyber par categorie de menaces",
@@ -483,7 +483,7 @@ _JITTER = {
 # ==============================================================
 # BUILD EVENTS -- cache 5 min pour eviter recalcul NER
 # ==============================================================
-@st.cache_data(ttl=300, show_spinner="Analyse geographique des articles...")
+@st.cache_data(ttl=600, show_spinner="Analyse geographique des articles...")
 def _build_events(_df):
     df_local = _df.copy()
     rng = random.Random(42)

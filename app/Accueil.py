@@ -11,7 +11,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from db_connect import get_mart_k1, get_stg_articles, force_refresh, get_sidebar_counts
+from db_connect import get_mart_k1, get_stg_articles, force_refresh
 from utils_lang import t
 
 st.set_page_config(page_title="CyberPulse", layout="wide", initial_sidebar_state="expanded")
@@ -19,7 +19,7 @@ st.set_page_config(page_title="CyberPulse", layout="wide", initial_sidebar_state
 # ── Sidebar CSS (module partage) -- badges dynamiques ─────────────────────────
 sys.path.insert(0, os.path.dirname(__file__))
 from sidebar_css import inject_sidebar_css
-inject_sidebar_css(counts=get_sidebar_counts())
+inject_sidebar_css()
 
 # ── CSS global + menu Option B ────────────────────────────────────────────────
 st.markdown("""

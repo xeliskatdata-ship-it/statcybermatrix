@@ -14,7 +14,7 @@ import sys, pathlib
 import os
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "src"))
-from db_connect import get_mart_k6, force_refresh
+from db_connect import get_mart_k6, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="CyberPulse - KPI 6 CVE", layout="wide")
 

@@ -1,103 +1,172 @@
 # CyberPulse
 
-Dashboard automatise de Threat Intelligence cyber. 
-Collecte, classifie et visualise en temps reel les tendances issues de 64 sources (3 API + 61 flux RSS).
-Projet de fin de formation Data Analyst — Wild Code School, promotion 2026.
+**Veille automatique & analyse NLP des actualités cyber**
+
+Dashboard de threat intelligence qui collecte, nettoie, classifie et géolocalise les menaces cyber en temps réel depuis 64 sources spécialisées.
+
+> Projet solo · Wild Code School · Data Analytics 2026  
+> Démo finale : 23 avril 2026
+
+---
+
+## Problématique
+
+**Comment identifier rapidement les sujets émergents en cybersécurité et suivre leur évolution ?**
+
+CyberPulse automatise la veille structurée : collecte toutes les heures, classification en 13 catégories de menaces, géolocalisation du pays attaqué par NLP, et affichage sur un dashboard interactif.
+
+---
+
+## Stack technique
+
+| Couche | Outils |
+|--------|--------|
+| Collecte | Python · Requests · feedparser · 3 APIs REST + 61 flux RSS |
+| Nettoyage | Pandas · 942 mots-clés · 13 catégories |
+| Base de données | PostgreSQL 15 · 3 couches (raw → stg → mart) |
+| Transformation | dbt (staging + 6 marts) |
+| Orchestration | Apache Airflow 2.8 · DAG 4 tâches · cron horaire |
+| Dashboard | Streamlit · Plotly · Leaflet.js |
+| NLP | spaCy (en_core_web_sm + fr_core_news_sm) |
+| Conteneurisation | Docker Compose (3 services) |
+| i18n | FR/EN · deep-translator |
 
 ---
 
 ## Architecture
 
 ```
-Sources (64)          Pipeline ETL              PostgreSQL           Dashboard
-+-----------+     +----------------+     +------------------+     +------------+
-| NewsAPI   |     | acquisition.py |     | raw_articles     |     | Streamlit  |
-| OTX       | --> | cleaning.py    | --> | stg_articles (v) | --> | 6 KPIs     |
-| NVD       |     | load_to_db.py  |     | mart_k1..k6 (t)  |     | Carte      |
-| 61 RSS    |     +----------------+     +------------------+     +------------+
-              orchestre par Airflow        transforme par dbt
+acquisition.py (3 APIs + 61 RSS)
+      │
+      ▼
+cleaning.py (942 keywords → 13 catégories)
+      │
+      ▼
+load_to_db.py → PostgreSQL raw_articles
+                      │
+                      ▼
+              dbt run → stg_articles (classification regex)
+                      │
+                      ▼
+                 mart_k1 ... mart_k6 (agrégation)
+                      │
+                      ▼
+              Streamlit Dashboard (8 pages)
 ```
 
-**3 couches de donnees :**
-
-- **raw** — articles bruts inseres par `load_to_db.py`
-- **stg** — vue dbt avec parsing de dates, classification par regex (13 categories, 942 keywords)
-- **mart** — 6 tables dbt pre-agregees, lues directement par le dashboard
-
----
-
-## Stack technique
-
-| Composant | Technologie | Role |
-|-----------|-------------|------|
-| Collecte | Python, feedparser, requests | 3 API REST + 61 flux RSS |
-| Nettoyage | Pandas, regex | Dedup, normalisation, classification |
-| Base | PostgreSQL 15 | Stockage 3 couches (raw/stg/mart) |
-| Transformation | dbt 1.9 | 7 modeles (1 view + 6 tables) |
-| Orchestration | Airflow 2.8 | DAG horaire, 4 taches |
-| Dashboard | Streamlit 1.53 | 6 KPIs + carte interactive |
-| NLP | spaCy (en + fr) | Geolocalisation NER sur la carte |
-| Cartographie | Leaflet.js | Carte temps reel avec scoring de confiance |
-| Visualisation | Plotly | Graphiques interactifs |
-| Infra | Docker Compose | 3 containers (postgres, streamlit, airflow) |
+**Orchestration Airflow :**
+```
+t1_acquisition → t2_cleaning → t3_load_to_db → t4_dbt_run
+```
 
 ---
 
-## KPIs
+## Sources de données (64)
 
-| Page | Titre | Contenu |
-|------|-------|---------|
-| KPI 1 | Volume de collecte | Articles par jour et par source |
-| KPI 2 | Mots-cles cyber | Heatmap categorie x periode, scatter interactif |
-| KPI 3 | Repartition des menaces | Radar/donut/bar par categorie, heatmap source x categorie |
-| KPI 4 | Tendances temporelles | Evolution par vecteur avec moyenne mobile et z-score |
-| KPI 5 | Threat Intelligence Matrix | Alertes hebdomadaires, treemap, volatilite |
-| KPI 6 | CVEs les plus citees | Top CVEs, fiche detail NVD, echelle CVSS |
-| Carte | Carte des menaces | Geolocalisation NER, 4 layers, scoring de confiance |
-
----
-
-## Sources de donnees
-
-**3 API REST :**
-- NewsAPI (100 articles/requete)
-- AlienVault OTX (50 pulses)
-- NVD / NIST (50 CVEs recentes)
-
-**61 flux RSS** repartis en 7 groupes :
-presse generaliste (9), investigatif (4), francophone (4), gouvernemental (4), vendors threat research (14), DFIR & Blue Team (3), presse tech (2), OSINT (7), Threat Intelligence (14).
+| Type | Nombre | Exemples |
+|------|--------|----------|
+| API REST | 3 | NewsAPI, AlienVault OTX, NVD/NIST |
+| Presse anglo généraliste | 9 | The Hacker News, BleepingComputer, Krebs on Security |
+| Investigatif & experts | 4 | The Record, Infosecurity Magazine |
+| Francophone | 4 | Zataz, ANSSI, French Breaches, LeMagIT |
+| Gouvernemental | 4 | ANSSI, CERT-EU, NCSC UK, ENISA |
+| Vendors threat research | 14 | Unit42, Talos, Microsoft Security, CrowdStrike |
+| DFIR & Blue Team | 3 | The DFIR Report, Red Canary, Huntress |
+| OSINT & investigations | 7 | Bellingcat, Intel471, Shodan Blog |
+| Threat Intelligence | 11+ | SANS ISC, Securelist, Proofpoint, Citizen Lab |
+| Presse tech sécurité | 2 | Wired Security, Ars Technica Security |
 
 ---
 
-## Installation et lancement
+## KPIs & Dashboard
 
-### Pre-requis
+| # | Indicateur | Visualisation |
+|---|-----------|---------------|
+| K1 | Articles collectés par jour / source | Small multiples + heatmap |
+| K2 | Top mots-clés fréquents | Bar chart + heatmap catégorie×période + scatter interactif |
+| K3 | Répartition par type de menace | Donut / Treemap |
+| K4 | Évolution des mentions d'une menace | Courbe temporelle + filtre |
+| K5 | Alertes critiques par semaine | Barres + seuil d'alerte |
+| K6 | Top CVE les plus mentionnées | Tableau classé + histogramme |
+| K7 | Carte mondiale des menaces | Leaflet.js + géolocalisation NLP |
 
-- Docker Desktop
-- Git Bash (Windows) ou terminal Unix
-- Fichier `.env` a la racine du projet
+---
+
+## Classification des menaces
+
+**13 catégories · 942 mots-clés** (cleaning.py) + **regex SQL** (stg_articles.sql)
+
+| Catégorie | Exemples de mots-clés |
+|-----------|----------------------|
+| ransomware | lockbit, blackcat, ryuk, conti, akira, double extortion |
+| phishing | spear-phishing, bec, credential stuffing, quishing |
+| vulnerability | cve, zero-day, rce, log4shell, privilege escalation |
+| malware | trojan, cobalt strike, mimikatz, infostealer |
+| apt | lazarus, volt typhoon, apt28, fancy bear |
+| data_breach | data breach, leak, exfiltration, dark web |
+| ddos | ddos, amplification, killnet, botnet attack |
+| supply_chain | npm, pypi, solarwinds, dependency confusion |
+| cryptography | — |
+| defense | — |
+| offensive | — |
+| compliance | — |
+| identity | — |
+| general | filet de sécurité (17,9% des articles) |
+
+**Résultat :** catégorie "general" réduite de 54,8% à 17,9% grâce à un enrichissement en 2 passes.
+
+---
+
+## Géolocalisation intelligente (carte des menaces)
+
+Le pipeline `extract_target()` identifie le **pays attaqué** (pas la source du média) en 5 étapes :
+
+1. **Phrases explicites** — 10 regex EN+FR ("breach in France", "attaque contre l'Allemagne")
+2. **Nom de pays dans le titre** — 65+ pays reconnus (TARGET_GEO)
+3. **Nom de pays dans le corps** — description[:1000], filtre len ≥ 4
+4. **spaCy NER bilingue** — modèles en/fr, scoring par proximité pays↔mot-clé cyber
+5. **Fallback source** — coordonnées de la source RSS (dernier recours)
+
+**Score de confiance** (`_compute_confidence`) : 0–100 sur 3 axes :
+- Localisation (0–40 pts) : pays trouvé dans le texte vs fallback
+- Victime (0–35 pts) : organisation identifiée par regex + spaCy ORG
+- Signal cyber (0–15 pts) : mot-clé cyber en début d'article
+
+Seuils : **forte** ≥ 70 | **moyenne** ≥ 45 | **faible** < 45
+
+---
+
+## Installation
+
+### Prérequis
+
+- Docker & Docker Compose
+- Python 3.11+
+- Clés API dans `.env` 
 
 ### Lancement
 
 ```bash
-# 1. Demarrer les containers
-docker compose up -d --build
+# Démarrer les 3 services (PostgreSQL + Airflow + Streamlit)
+docker compose up -d
 
-# 2. Attendre que PostgreSQL soit pret
-docker compose logs -f postgres
-# Attendre "database system is ready to accept connections", puis Ctrl+C
+# Vérifier
+docker ps
 
-# 3. Lancer la collecte initiale
-docker exec -it cyberpulse_streamlit bash -c "cd /app && python src/acquisition.py && python src/cleaning.py && python db/load_to_db.py"
+### Lancement manuel du pipeline
 
-# 4. Lancer dbt
-docker exec -it cyberpulse_airflow bash -c "cd /opt/airflow/dbt && dbt run --profiles-dir ."
+```bash
+# Collecte
+python src/acquisition.py
 
-# 5. Ouvrir le dashboard
-# http://
+# Nettoyage
+python src/cleaning.py
 
-# 6. Ouvrir Airflow (admin / admin)
-# http://
+# Chargement en base
+python db/load_to_db.py
+
+# Transformation dbt
+docker exec -it cyberpulse_airflow bash -c "cd /opt/airflow/dbt && dbt run"
 ```
 
 ---
@@ -106,84 +175,82 @@ docker exec -it cyberpulse_airflow bash -c "cd /opt/airflow/dbt && dbt run --pro
 
 ```
 cyberpulse/
-  app/
-    app.py                    # Page d'accueil Streamlit
-    carte_menaces.html        # Template HTML Leaflet
-    pages/
-      1_kpi1_*.py
-      2_kpi2_*.py
-      3_kpi3_Menaces.py
-      4_kpi4_Tendances.py
-      5_kpi5_Alertes.py
-      6_kpi6_CVE.py
-      7_Carte_Menaces.py
-  src/
-    acquisition.py            # Collecte 64 sources
-    cleaning.py               # Nettoyage 7 etapes, 942 keywords
-    db_connect.py             # Connecteur PostgreSQL pour Streamlit
-  db/
-    schema.sql                # Init raw_articles
-    load_to_db.py             # Chargement CSV -> PostgreSQL
-  dbt/
-    models/
-      staging/
-        stg_articles.sql      # Vue : parsing dates + classification
-        sources.yml
-      mart/
-        mart_k1.sql           # Articles par jour x source
-        mart_k2.sql           # Keywords x periode glissante
-        mart_k3.sql           # Repartition categorie x source
-        mart_k4.sql           # Mentions par jour x categorie
-        mart_k5.sql           # Alertes par semaine x categorie
-        mart_k6.sql           # Top 20 CVEs
-    dbt_project.yml
-    profiles.yml
-  pipelines/
-    dag_cyberpulse.py         # DAG Airflow (horaire)
-  docker-compose.yml
-  requirements.txt
-  .env
+├── src/
+│   ├── acquisition.py        # 3 APIs + 61 RSS = 64 sources
+│   ├── cleaning.py           # 13 catégories · 942 mots-clés
+│   ├── db_connect.py         # Connexion PostgreSQL · cache TTL 120s
+│   └── utils_lang.py         # i18n FR/EN · 95+ clés
+│
+├── app/
+│   ├── app.py                # Dashboard accueil + navigation KPI
+│   ├── carte_menaces.html    # Leaflet.js · marqueurs scintillants
+│   └── pages/
+│       ├── 1_kpi1_Articles.py
+│       ├── 2_kpi2_Mots_cles.py
+│       ├── 3_KPI3_Menaces.py
+│       ├── 4_KPI4_Tendances.py
+│       ├── 5_KPI5_Alertes.py
+│       ├── 6_KPI6_CVE.py
+│       └── 7_Carte_Menaces.py
+│
+├── db/
+│   ├── schema.sql            # Tables raw / stg / mart
+│   └── load_to_db.py         # INSERT ON CONFLICT · WHERE NOT EXISTS
+│
+├── dbt/
+│   ├── profiles.yml
+│   └── models/
+│       ├── staging/
+│       │   └── stg_articles.sql   # Classification 13 catégories · CTE
+│       └── mart/
+│           ├── mart_k1.sql ... mart_k6.sql
+│
+├── pipelines/
+│   └── dag_cyberpulse.py     # DAG Airflow · 4 tâches · cron horaire
+│
+├── docker-compose.yml        # PostgreSQL + Airflow + Streamlit
+├── .env                      # Clés API + credentials PostgreSQL
+└── README.md
 ```
 
 ---
 
-## Pipeline Airflow
+## Architecture Docker
 
-DAG `cyberpulse_daily_pipeline` — execution toutes les heures :
-
-```
-acquisition -> cleaning -> load_to_db -> dbt_run
-```
-
-- 2 retries par tache, delai de 5 minutes
-- Tags : `cyberpulse`, `etl`
+| Service | Image | Port | Rôle |
+|---------|-------|------|------|
+| postgres | postgres:15 | 5432 | Base de données |
+| streamlit | python:3.11-slim | 8501 | Dashboard |
+| airflow | apache/airflow:2.8.0 | 8080 | Orchestration pipeline |
 
 ---
 
-## Classification des menaces
+## Architecture dbt
 
-13 categories detectees par regex (stg_articles) :
+```
+raw_articles (table PostgreSQL)
+  → stg_articles (view · classification 13 catégories par regex)
+    → mart_k1 ... mart_k6 (tables · agrégation uniquement)
+```
 
-ransomware, phishing, vulnerability, malware, apt, ddos, data_breach, supply_chain, cryptography, defense, offensive, compliance, identity.
-
-Fallback : `general` si aucun pattern ne matche.
+**Principe DRY** : la classification est uniquement dans `stg_articles.sql`. Les marts ne font que l'agrégation.
 
 ---
 
-## Geolocalisation (Carte des menaces)
+## Limites connues
 
-4 niveaux d'enrichissement :
-
-1. **Patterns de contexte** — regex bilingues (EN/FR) detectant le pays attaque
-2. **Scan titre + description** — lookup dans un referentiel de 80+ pays
-3. **spaCy NER** — modeles `en_core_web_sm` + `fr_core_news_sm` avec scoring de proximite mot-cle cyber / entite GPE
-4. **Fallback source** — geolocalisation par origine de la source si aucun pays detecte
-
-Score de confiance 0-100 sur 4 axes : localisation, victime, signal cyber, penalites.
+| Limite | Description |
+|--------|------------|
+| Attaquant vs victime | La géoloc peut confondre le pays attaquant et le pays attaqué (ex: "Russia's Forest Blizzard" → Russie détectée comme victime). Le score faible alerte sur ces cas. |
+| Une catégorie par article | Un article multi-menaces est forcé dans une seule catégorie (premier match) |
+| Deux systèmes de classification | cleaning.py (942 keywords) et stg_articles.sql (regex dbt) coexistent — le dashboard lit dbt |
 
 ---
 
 ## Auteur
 
-**Xelis - Stéphanie Bérard** — Data Analyst, Wild Code School 2026
+**Stéphanie Bérard alias Xelis** · Wild Code School · Promotion Data Analytics 2026
 
+---
+
+*Dernière mise à jour : 10 avril 2026*

@@ -13,7 +13,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from db_connect import get_mart_k2, force_refresh, get_articles_by_keyword
+from db_connect import get_mart_k2, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="KPI 2 - Mots-clés", layout="wide")
 

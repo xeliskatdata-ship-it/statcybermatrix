@@ -14,7 +14,7 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-from db_connect import get_mart_k4, force_refresh
+from db_connect import get_mart_k4, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="CyberPulse - KPI 4 Tendances", layout="wide")
 

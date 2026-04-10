@@ -14,7 +14,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-from db_connect import get_mart_k5, force_refresh
+from db_connect import get_mart_k5, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="CyberPulse - KPI 5 Alertes", layout="wide")
 
