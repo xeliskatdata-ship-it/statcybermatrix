@@ -164,6 +164,6 @@ def get_sidebar_counts():
 def force_refresh():
     # Vide le cache Streamlit -- force rechargement depuis PostgreSQL
     for fn in (get_mart_k1, get_mart_k2, get_mart_k3, get_mart_k4,
-               get_mart_k5, get_mart_k6, get_stg_articles, get_articles_by_keyword):
+               get_mart_k5, get_mart_k6, get_stg_articles,
+               get_articles_by_keyword, get_sidebar_counts):
         fn.clear()
-        
