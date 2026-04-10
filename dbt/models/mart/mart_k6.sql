@@ -1,25 +1,19 @@
--- K6 -- CVE les plus mentionnees dans les articles
+-- CyberPulse -- mart K6
+-- CVE les plus mentionnees dans les articles
+-- Extraction par regex sur titre + description
 
 {{ config(materialized='table') }}
 
-WITH
-    cve_extraites
-    AS
-    (
-        SELECT
-            t.cve[1]
-     AS cve,
+WITH cve_extraites AS (
+    SELECT
+        t.cve[1] AS cve,
         id
     FROM {{ ref('stg_articles') }},
-    LATERAL regexp_matches
-(
-        COALESCE
-(title, '') || ' ' || COALESCE
-(description, ''),
+    LATERAL regexp_matches(
+        COALESCE(title, '') || ' ' || COALESCE(description, ''),
         'CVE-[0-9]{4}-[0-9]{4,7}',
         'g'
-    ) AS t
-(cve)
+    ) AS t(cve)
 )
 
 SELECT

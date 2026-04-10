@@ -1,12 +1,11 @@
 """
 CyberPulse -- KPI 3
-Breakdown by threat type
-Source de donnees : PostgreSQL (mart_k3)
+Analyse de la répartition des menaces
+Design : fond bokeh, animation ECG, cartes animées (style KPI1)
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -17,40 +16,96 @@ from datetime import datetime
 
 from db_connect import get_mart_k3, force_refresh
 
-st.set_page_config(page_title="KPI 3 - Threats", layout="wide")
+st.set_page_config(page_title="CyberPulse - KPI 3 Menaces", layout="wide")
 
-# ── CSS global ────────────────────────────────────────────────────────────────
+
+# ── Helper : titre de section centré (évite la duplication HTML) ──────────────
+def _section_title(text: str, size: str = "1.4rem"):
+    st.markdown(
+        f"<div style='text-align:center;font-family:Roboto Mono,monospace;font-size:{size};"
+        "letter-spacing:.1em;text-transform:uppercase;color:#3b82f6;"
+        "border-bottom:1px solid #3b82f6;padding-bottom:8px;width:fit-content;"
+        f"margin:28px auto 16px'>{text}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+# ── CSS global (style KPI1) ───────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
-html,body,[class*="css"]{font-family:'IBM Plex Sans',sans-serif;}
-.stApp { background: #050a14 !important; }
-[data-testid="stAppViewContainer"] > * { position:relative; z-index:1; }
-[data-testid="stSidebar"] { z-index:2 !important; background:#0f1422!important; border-right:1px solid #1e2a42; }
-[data-testid="stSidebar"] *{color:#a8b8d0!important;}
-.kpi-tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
-letter-spacing:.15em;text-transform:uppercase;color:#f59e0b;background:rgba(245,158,11,.1);
-border:1px solid rgba(245,158,11,.2);border-radius:4px;padding:3px 10px;margin-bottom:14px;}
-.desc-box{background:#0f1422;border:1px solid #1e2a42;border-left:3px solid #f59e0b;
-border-radius:8px;padding:14px 18px;margin-bottom:20px;color:#94a3b8;font-size:0.88rem;line-height:1.7;}
-.insight-box{background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);
-border-radius:8px;padding:12px 18px;margin-top:16px;color:#fcd34d;font-size:0.88rem;}
-.note-box{background:rgba(100,116,139,0.07);border:1px solid rgba(100,116,139,0.2);
-border-radius:8px;padding:10px 16px;margin-top:12px;color:#94a3b8;font-size:0.82rem;}
-.badge-live{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;700&display=swap');
+html,body,[class*="css"]{font-family:'Roboto',sans-serif;}
+
+.stApp {
+    background: radial-gradient(ellipse at 20% 50%, rgba(14,40,80,0.9) 0%, #050a14 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(8,30,60,0.8) 0%, transparent 50%);
+    background-color: #050a14 !important;
+}
+.stApp::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        radial-gradient(circle, rgba(59,130,246,0.15) 1px, transparent 1px),
+        radial-gradient(circle, rgba(96,165,250,0.08) 1px, transparent 1px),
+        radial-gradient(circle, rgba(147,197,253,0.06) 1px, transparent 1px);
+    background-size: 80px 80px, 130px 130px, 200px 200px;
+    background-position: 0 0, 40px 40px, 80px 80px;
+    filter: blur(0.8px);
+    z-index: 0;
+    pointer-events: none;
+}
+[data-testid="stAppViewContainer"] > * { position: relative; z-index: 1; }
+[data-testid="stSidebar"] { z-index: 2 !important; background: #0a1628 !important; border-right: 1px solid rgba(30,111,255,0.2); }
+[data-testid="stSidebar"] * { color: #a8b8d0 !important; }
+
+.kpi-tag{display:inline-block;font-family:'Roboto Mono',monospace;font-size:0.65rem;
+letter-spacing:.15em;text-transform:uppercase;color:#3b82f6;background:rgba(59,130,246,.1);
+border:1px solid rgba(59,130,246,.2);border-radius:4px;padding:3px 10px;margin-bottom:14px;}
+
+.page-title {
+    text-align: center;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #3b82f6;
+    margin-bottom: 20px;
+    line-height: 1.2;
+    font-family: 'Roboto', sans-serif;
+}
+
+.desc-box {
+    background: rgba(15,20,34,0.8);
+    border: 1px solid #1e2a42;
+    border-left: 3px solid #3b82f6;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    backdrop-filter: blur(8px);
+    text-align: center;
+}
+.desc-line { color: #94a3b8; font-size: 1rem; line-height: 1.8; }
+.desc-line b { color: #cbd5e1; }
+
+.badge-live{display:inline-flex;align-items:center;gap:6px;font-family:'Roboto Mono',monospace;
 font-size:0.68rem;letter-spacing:.12em;text-transform:uppercase;
 color:#22c55e;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);
 border-radius:20px;padding:4px 12px;}
-.badge-err{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
-font-size:0.68rem;letter-spacing:.12em;text-transform:uppercase;
-color:#ef4444;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
-border-radius:20px;padding:4px 12px;}
 .dot-live{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.insight-box{background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);
+border-radius:8px;padding:12px 18px;margin-top:16px;color:#93c5fd;font-size:0.88rem;backdrop-filter:blur(8px);}
+
+.section-title-center{font-family:'Roboto Mono',monospace;font-size:0.7rem;letter-spacing:.18em;
+text-transform:uppercase;color:#64748b;border-bottom:1px solid #3b82f6;
+padding-bottom:6px;margin:24px auto 16px;width:fit-content;display:block;text-align:center;}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Fond animé ECG ────────────────────────────────────────────────────────────
+# ── Fond animé ECG (identique KPI1) ──────────────────────────────────────────
 components.html("""
 <script>
 (function() {
@@ -178,264 +233,286 @@ components.html("""
   }
 
   var stop = startECG();
-
   setInterval(function() {
-    if (!p.getElementById('ecg-bg')) {
-      stop && stop();
-      stop = startECG();
-    }
+    var cv = p.getElementById('ecg-bg');
+    if (!cv) { stop && stop(); stop = startECG(); }
   }, 2000);
-
   p.addEventListener('visibilitychange', function() {
-    if (!p.hidden) {
-      stop && stop();
-      stop = startECG();
-    }
+    if (!p.hidden) { stop && stop(); stop = startECG(); }
   });
-
 })();
 </script>
 """, height=0)
 
-
-COLORS = [
-    '#ef4444', '#f59e0b', '#3b82f6', '#a855f7',
-    '#22c55e', '#14b8a6', '#f97316', '#ec4899', '#64748b',
-]
-
-CAT_DESC = {
-    'ransomware'   : 'Software that encrypts data and demands a ransom',
-    'phishing'     : "Attacks using identity spoofing to steal credentials",
-    'vulnerability': 'Security flaws in software or systems (CVE)',
-    'malware'      : 'Malicious software (trojans, backdoors, spyware...)',
-    'apt'          : 'Advanced persistent threats, often state-sponsored',
-    'ddos'         : 'Distributed denial-of-service attacks',
-    'data_breach'  : 'Data leaks or theft',
-    'supply_chain' : 'Attacks via third-party dependencies or suppliers',
-    'general'      : 'Cyber articles without an identified threat category',
+# ── Palette & config ──────────────────────────────────────────────────────────
+COLORS_MAP = {
+    'vulnerability': '#3b82f6', 'ransomware': '#ef4444', 'phishing': '#f59e0b',
+    'malware': '#a855f7', 'apt': '#14b8a6', 'ddos': '#22c55e',
+    'data_breach': '#6366f1', 'supply_chain': '#ec4899', 'cryptography': '#06b6d4',
+    'defense': '#f97316', 'offensive': '#84cc16', 'compliance': '#0ea5e9',
+    'identity': '#e879f9', 'general': '#64748b',
 }
 
-CAT_ORDER = [
-    'ransomware', 'malware', 'vulnerability', 'phishing',
-    'apt', 'data_breach', 'supply_chain', 'ddos', 'general',
-]
+CAT_DESC = {
+    'ransomware': 'Chiffrement et extorsion',
+    'phishing': 'Ingénierie sociale et vol identifiants',
+    'vulnerability': 'Exploitation de failles logicielles',
+    'malware': 'Logiciels malveillants divers',
+    'apt': 'Menaces persistantes avancées',
+    'ddos': 'Déni de service distribué',
+    'data_breach': 'Exfiltration de données',
+    'supply_chain': 'Compromission chaîne logistique',
+    'cryptography': 'Chiffrement et certificats',
+    'defense': 'Opérations de sécurité',
+    'offensive': 'Sécurité offensive et pentest',
+    'compliance': 'Conformité et réglementation',
+    'identity': 'Identité et gestion des accès',
+    'general': 'Articles non catégorisés',
+}
 
 PLOTLY_BASE = dict(
     paper_bgcolor='rgba(0,0,0,0)',
-    plot_bgcolor='rgba(0,0,0,0)',
-    font=dict(family='IBM Plex Sans', color='#94a3b8'),
+    plot_bgcolor='rgba(5,10,20,0.6)',
+    font=dict(family='Roboto', color='#94a3b8'),
 )
 
 # ── En-tête ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="kpi-tag">KPI 3</div>', unsafe_allow_html=True)
-st.markdown("### Breakdown by threat type")
-st.markdown("""
-<div class="desc-box">
-    <b>Objective:</b> Visualise the proportion of each threat type in collected articles.<br>
-    <b>Reading:</b> A dominant category indicates the most covered topic in the period.<br>
-    <b>Data source:</b> PostgreSQL -- table <code>mart_k3</code> (categories computed by dbt regex).
-</div>
-""", unsafe_allow_html=True)
-st.markdown("---")
+st.markdown('<div class="page-title">Analyse Vectorielle des Menaces</div>', unsafe_allow_html=True)
 
-# ── Chargement PostgreSQL ─────────────────────────────────────────────────────
-col_refresh, col_badge, _ = st.columns([1, 2, 5])
-
-with col_refresh:
-    if st.button("Refresh", type="primary", use_container_width=True):
+# ── Refresh + badge ───────────────────────────────────────────────────────────
+_, col_r, col_b, _ = st.columns([2, 1, 2, 2])
+with col_r:
+    if st.button("⟳ Synchroniser", use_container_width=True):
         force_refresh()
         st.rerun()
 
+# ── Chargement ────────────────────────────────────────────────────────────────
 try:
-    df_raw  = get_mart_k3()
-    load_ok = True
+    df_raw = get_mart_k3()
+    load_ok = not df_raw.empty
     load_ts = datetime.now().strftime('%H:%M:%S')
-except Exception as e:
-    load_ok  = False
-    load_err = str(e)
-
-with col_badge:
-    if load_ok:
+    with col_b:
         st.markdown(
             f'<div class="badge-live"><span class="dot-live"></span>'
-            f'PostgreSQL · {load_ts}</div>',
+            f'LIVE · MàJ {load_ts} · {int(df_raw["nb_articles"].sum()):,} articles</div>',
             unsafe_allow_html=True,
         )
-    else:
-        st.markdown('<div class="badge-err">✗ Erreur connexion</div>', unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"Connexion PostgreSQL impossible : {e}")
+    st.stop()
 
 if not load_ok:
-    st.error(f"Could not connect to PostgreSQL : {load_err}\n\nCheck that Docker is running.")
+    st.warning("mart_k3 est vide. Lance `dbt run` depuis le dossier dbt/.")
     st.stop()
 
-if df_raw.empty:
-    st.warning("mart_k3 is empty. Run `dbt run --select mart_k3`.")
-    st.stop()
+# ── Filtres sidebar ───────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### Filtres")
+    sources_all = sorted(df_raw['source'].dropna().unique().tolist())
+    sel_sources = st.multiselect("Sources de données", sources_all, default=sources_all)
 
-# ── Filtres ───────────────────────────────────────────────────────────────────
-sources_dispo = sorted(df_raw['source'].dropna().unique().tolist())
-sel_sources   = st.multiselect(
-    "Filter by source", sources_dispo, default=sources_dispo, key="k3_src"
-)
+# Filtre appliqué — fallback sur tout si rien sélectionné
+df = df_raw[df_raw['source'].isin(sel_sources)] if sel_sources else df_raw
 
-dff = df_raw[df_raw['source'].isin(sel_sources)] if sel_sources else df_raw
-
+# Agrégation catégorie → volume, tri descendant
 agg = (
-    dff.groupby('category')['nb_articles']
+    df.groupby('category', as_index=False)['nb_articles']
     .sum()
-    .reset_index()
-    .rename(columns={'category': 'categorie'})
     .sort_values('nb_articles', ascending=False)
 )
 total = int(agg['nb_articles'].sum())
 
-if agg.empty or total == 0:
-    st.warning("No data for selected sources.")
-    st.stop()
+# ── Métriques clés ────────────────────────────────────────────────────────────
+top_cat = agg.iloc[0]['category'] if not agg.empty else "N/A"
+top_val = int(agg.iloc[0]['nb_articles']) if not agg.empty else 0
+top_pct = round(top_val / total * 100, 1) if total > 0 else 0
+nb_cats = len(agg[agg['nb_articles'] > 0])
 
-# ── Graphiques ────────────────────────────────────────────────────────────────
-col_viz, col_ctrl = st.columns([4, 1])
+_section_title("Vue d'ensemble")
 
-with col_ctrl:
-    st.markdown("<br>", unsafe_allow_html=True)
-    viz = st.radio("Visualisation", ["Donut", "Treemap", "Bars"], key="k3_viz")
+components.html(f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;700&display=swap');
+* {{ box-sizing:border-box; margin:0; padding:0; }}
+body {{ background:transparent; font-family:'Roboto',sans-serif; }}
+.grid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }}
+.card {{
+    background:rgba(15,20,34,0.85); border:1px solid #1e2a42; border-radius:10px;
+    padding:28px 20px; text-align:center; position:relative; overflow:hidden;
+    transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s; cursor:default;
+    backdrop-filter:blur(8px);
+}}
+.card::before {{ content:''; position:absolute; top:0; left:0; width:100%; height:3px; border-radius:10px 10px 0 0; }}
+.card:nth-child(1)::before {{ background:#3b82f6; }}
+.card:nth-child(2)::before {{ background:#ef4444; }}
+.card:nth-child(3)::before {{ background:#f59e0b; }}
+.card:nth-child(4)::before {{ background:#22c55e; }}
+.card:hover {{ border-color:#3b82f6; transform:translateY(-3px); box-shadow:0 8px 28px rgba(59,130,246,0.18); background:rgba(20,28,48,0.95); }}
+.val {{ font-family:'Roboto Mono',monospace; font-size:3rem; font-weight:700; color:#e2e8f0; }}
+.lbl {{ font-size:1rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; margin-top:10px; }}
+.sub {{ font-size:1.1rem; margin-top:8px; font-weight:500; }}
+</style>
+<div class="grid">
+  <div class="card">
+    <div class="val" id="v1">0</div>
+    <div class="lbl">Volume Total</div>
+    <div class="sub" style="color:#3b82f6">Articles analysés</div>
+  </div>
+  <div class="card">
+    <div class="val" style="font-size:1.8rem">{top_cat.upper()}</div>
+    <div class="lbl">Vecteur Critique</div>
+    <div class="sub" style="color:#ef4444">{top_pct}% de la volumétrie</div>
+  </div>
+  <div class="card">
+    <div class="val" id="v3">0</div>
+    <div class="lbl">Catégories actives</div>
+    <div class="sub" style="color:#f59e0b">Segments détectés</div>
+  </div>
+  <div class="card">
+    <div class="val">LIVE</div>
+    <div class="lbl">Status</div>
+    <div class="sub" style="color:#22c55e">MàJ : {load_ts}</div>
+  </div>
+</div>
+<script>
+function animCount(id, target, duration, isFloat) {{
+  var el = document.getElementById(id);
+  if (!el || isNaN(target)) return;
+  var step = target / (duration / 16), current = 0;
+  var timer = setInterval(function() {{
+    current += step;
+    if (current >= target) {{ current = target; clearInterval(timer); }}
+    el.textContent = isFloat ? current.toFixed(1).replace('.',',') : Math.floor(current).toLocaleString('fr-FR');
+  }}, 16);
+}}
+animCount('v1', {total}, 1200, false);
+animCount('v3', {nb_cats}, 800, false);
+</script>
+""", height=160)
+
+# ── Graphique principal + config ──────────────────────────────────────────────
+_section_title("Répartition des vecteurs de menace")
+
+col_viz, col_side = st.columns([3, 1])
+
+with col_side:
+    _section_title("Configuration", size="0.7rem")
+    viz_type = st.radio("Mode d'affichage", ["Radar Chart", "Donut Chart", "Bar Chart"])
+
+    st.markdown(f"""
+    <div class="insight-box">
+        <b>Analyse automatique :</b><br>
+        La menace <b>{top_cat}</b> représente <b>{top_pct}%</b> du volume total
+        ({top_val:,} articles sur {total:,}).
+        Ce vecteur nécessite une surveillance accrue des logs SIEM correspondants.
+    </div>
+    """, unsafe_allow_html=True)
 
 with col_viz:
-    if viz == "Donut":
-        fig = px.pie(
-            agg, names='categorie', values='nb_articles',
-            color_discrete_sequence=COLORS,
-            hole=0.45,
-            title=f"Threat breakdown -- {total:,} articles ({len(sel_sources)} sources)"
-        )
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        fig.update_layout(**PLOTLY_BASE, margin=dict(l=20, r=20, t=60, b=20), height=460)
-
-    elif viz == "Treemap":
-        fig = px.treemap(
-            agg, path=['categorie'], values='nb_articles',
-            color='nb_articles',
-            color_continuous_scale=[[0.0, '#1e3a5f'], [0.5, '#f59e0b'], [1.0, '#ef4444']],
-            title=f"Threat treemap -- {total:,} articles"
-        )
-        fig.update_layout(**PLOTLY_BASE, margin=dict(l=20, r=20, t=60, b=20), height=460)
-
-    else:
-        agg_sorted = agg.sort_values('nb_articles')
-        fig = px.bar(
-            agg_sorted, x='nb_articles', y='categorie',
-            orientation='h',
-            color='categorie',
-            color_discrete_sequence=COLORS,
-            title=f"Threats by article count -- {total:,} articles"
-        )
+    if viz_type == "Radar Chart":
+        fig = go.Figure(data=go.Scatterpolar(
+            r=agg['nb_articles'],
+            theta=agg['category'].str.upper(),
+            fill='toself',
+            line_color='#3b82f6',
+            fillcolor='rgba(59, 130, 246, 0.2)',
+        ))
         fig.update_layout(
-            **PLOTLY_BASE,
+            polar=dict(
+                bgcolor='rgba(0,0,0,0)',
+                radialaxis=dict(visible=True, gridcolor='#1e2a42', color='#94a3b8'),
+                angularaxis=dict(gridcolor='#1e2a42', color='#94a3b8'),
+            ),
+            **PLOTLY_BASE, height=450,
+        )
+    elif viz_type == "Donut Chart":
+        fig = px.pie(
+            agg, names='category', values='nb_articles', hole=0.6,
+            color='category', color_discrete_map=COLORS_MAP,
+        )
+        fig.update_traces(textposition='outside', textinfo='label+percent')
+        fig.update_layout(**PLOTLY_BASE, height=450, showlegend=False)
+    else:
+        # Bar horizontal — tri ascendant une seule fois
+        agg_bar = agg.sort_values('nb_articles')
+        fig = go.Figure(go.Bar(
+            x=agg_bar['nb_articles'],
+            y=agg_bar['category'],
+            orientation='h',
+            marker_color=[COLORS_MAP.get(c, '#3b82f6') for c in agg_bar['category']],
+            hovertemplate='<b>%{y}</b><br>%{x} articles<extra></extra>',
+        ))
+        fig.update_layout(
+            **PLOTLY_BASE, height=450,
             xaxis=dict(gridcolor='#1e2a42'),
             yaxis=dict(gridcolor='#1e2a42'),
-            showlegend=False,
-            margin=dict(l=20, r=20, t=60, b=20),
-            height=400,
         )
 
     st.plotly_chart(fig, use_container_width=True)
 
-# ── Métriques rapides ─────────────────────────────────────────────────────────
-top_cat     = agg.iloc[0]['categorie']
-top_count   = int(agg.iloc[0]['nb_articles'])
-top_pct     = round(top_count / total * 100, 1)
-nb_cats     = int((agg['nb_articles'] > 0).sum())
-general_n   = int(agg[agg['categorie'] == 'general']['nb_articles'].sum()) if 'general' in agg['categorie'].values else 0
-general_pct = round(general_n / total * 100, 1)
-
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Total articles",     f"{total:,}")
-m2.metric("Active categories", nb_cats)
-m3.metric(f"Top : {top_cat}",   f"{top_pct}%", f"{top_count} articles")
-m4.metric("Uncategorised",    f"{general_pct}%", f"{general_n} articles")
-
-# ── Insights automatiques ─────────────────────────────────────────────────────
-st.markdown(f"""
-<div class="insight-box">
-    <b>Insights:</b><br>
-    Dominant threat: <b>{top_cat}</b> -- <b>{top_pct}%</b> of articles ({top_count:,}).<br>
-    The <b>general</b> category ({general_pct}%) covers articles with no detected keyword.
-    Enrich the regex in <code>mart_k3.sql</code> to reduce this percentage.
-</div>
-""", unsafe_allow_html=True)
-
-# ── Heatmap source x catégorie ────────────────────────────────────────────────
-st.markdown("---")
-st.markdown("**Breakdown by source and category**")
+# ── Heatmap Sources × Catégories ─────────────────────────────────────────────
+_section_title("Matrice d'occurrence par source")
 st.markdown(
-    "<div style='color:#64748b;font-size:0.82rem;margin-bottom:12px'>"
-    "Number of articles per source for each threat category."
-    "</div>",
-    unsafe_allow_html=True
+    "<div style='text-align:center;color:#94a3b8;font-size:1.1rem;margin-bottom:20px'>"
+    "Croisement source × catégorie. Plus la couleur est intense, plus le volume est élevé."
+    "</div>", unsafe_allow_html=True,
 )
 
-pivot = dff.pivot_table(
-    index='source', columns='category', values='nb_articles',
-    aggfunc='sum', fill_value=0
-)
-col_order = [c for c in CAT_ORDER if c in pivot.columns] + [c for c in pivot.columns if c not in CAT_ORDER]
-pivot     = pivot[col_order]
-pivot['TOTAL'] = pivot.sum(axis=1)
-pivot     = pivot.sort_values('TOTAL', ascending=False)
+# Pivot avec tri par volume total descendant
+pivot = df.pivot_table(index='source', columns='category', values='nb_articles', aggfunc='sum', fill_value=0)
+pivot = pivot.loc[pivot.sum(axis=1).sort_values(ascending=False).index]
 
-with st.expander("View source x threat heatmap", expanded=True):
-    fig_heat = go.Figure(go.Heatmap(
-        z=pivot.drop(columns=['TOTAL']).values,
-        x=pivot.drop(columns=['TOTAL']).columns.tolist(),
+if not pivot.empty:
+    fig_heat = go.Figure(data=go.Heatmap(
+        z=pivot.values,
+        x=pivot.columns.tolist(),
         y=pivot.index.tolist(),
-        colorscale=[
-            [0.0,  '#0f1422'],
-            [0.15, '#78350f'],
-            [0.5,  '#f59e0b'],
-            [1.0,  '#ef4444'],
-        ],
+        colorscale=[[0.0, '#0a1628'], [0.15, '#1e3a5f'], [0.4, '#1d4ed8'], [0.7, '#3b82f6'], [1.0, '#93c5fd']],
         hoverongaps=False,
-        hovertemplate='<b>%{y}</b><br>Category: %{x}<br>Articles: %{z}<extra></extra>',
-        text=pivot.drop(columns=['TOTAL']).values,
-        texttemplate='%{text}',
-        textfont=dict(size=11, color='white'),
+        hovertemplate='<b>%{y}</b><br>%{x}<br>%{z} articles<extra></extra>',
         showscale=True,
-        colorbar=dict(title='Articles', tickfont=dict(color='#94a3b8')),
+        colorbar=dict(title='Articles', tickfont=dict(color='#94a3b8', size=14)),
     ))
     fig_heat.update_layout(
         **PLOTLY_BASE,
-        xaxis=dict(title='', tickangle=-30, gridcolor='#1e2a42'),
-        yaxis=dict(title='', gridcolor='#1e2a42'),
-        margin=dict(l=20, r=20, t=20, b=60),
-        height=max(250, 60 + len(pivot) * 38),
+        xaxis=dict(gridcolor='#1e2a42', tickangle=-30, tickfont=dict(size=14, color='#94a3b8')),
+        yaxis=dict(gridcolor='#1e2a42', tickfont=dict(size=14, color='#cbd5e1')),
+        margin=dict(l=20, r=20, t=10, b=40),
+        height=max(300, 50 + len(pivot) * 35),
     )
     st.plotly_chart(fig_heat, use_container_width=True)
 
-# ── Tableau détail ────────────────────────────────────────────────────────────
-st.markdown("---")
-st.markdown("**Detail by category**")
+# ── Interprétation & Insights ─────────────────────────────────────────────────
+if total > 0:
+    second_cat = agg.iloc[1]['category'] if len(agg) > 1 else "—"
+    second_val = int(agg.iloc[1]['nb_articles']) if len(agg) > 1 else 0
+    second_pct = round(second_val / total * 100, 1) if total > 0 else 0
+    general_row = agg[agg['category'] == 'general']
+    general_pct = round(int(general_row['nb_articles'].iloc[0]) / total * 100, 1) if not general_row.empty else 0
 
-agg_display = agg.copy()
-agg_display['% du total']  = (agg_display['nb_articles'] / total * 100).round(1).astype(str) + ' %'
-agg_display['Description'] = agg_display['categorie'].map(CAT_DESC).fillna('--')
-agg_display.columns        = ['Threat type', 'Articles', '% of total', 'Description']
-st.dataframe(agg_display, use_container_width=True, hide_index=True)
+    # Concentration top-2 : si > 50% du volume, signal de sur-représentation
+    top2_pct = round(top_pct + second_pct, 1)
 
-# ── Note méthodologique ───────────────────────────────────────────────────────
-st.markdown("""
-<div class="note-box">
-    <b>Method:</b> Categorisation is computed by regex in <code>mart_k3.sql</code>
-    on the title and description. The CASE order determines priority
-    (ransomware &gt; phishing &gt; vulnerability &gt; ... &gt; general).
-</div>
-""", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="insight-box">
+        <b>Interprétation & Insights</b><br><br>
+        • <b>Concentration :</b> les deux premiers vecteurs (<b>{top_cat}</b> + <b>{second_cat}</b>)
+          cumulent <b>{top2_pct}%</b> du corpus.
+          {'Sur-représentation — vérifier si les sources ne sont pas biaisées vers ces thèmes.' if top2_pct > 55 else 'Répartition équilibrée.'}<br>
+        • <b>Bruit :</b> {general_pct}% d'articles « general » non catégorisés.
+          {'Au-delà de 15 %, enrichir les règles de classification (keywords / spaCy).' if general_pct > 15 else 'Taux acceptable.'}<br>
+        • <b>Action :</b> croiser cette répartition avec les alertes SIEM du SOC
+          pour valider que la couverture médiatique reflète bien l'activité réelle des menaces.
+    </div>
+    """, unsafe_allow_html=True)
 
-# ── Export CSV ────────────────────────────────────────────────────────────────
-st.markdown("---")
-csv = agg_display.to_csv(index=False).encode('utf-8')
-st.download_button(
-    "Download breakdown (CSV)",
-    csv,
-    file_name=f"kpi3_menaces_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-    mime="text/csv"
-)
+# ── Détail données ────────────────────────────────────────────────────────────
+with st.expander("Détails des données brutes"):
+    agg_display = agg.copy()
+    agg_display['proportion'] = (agg_display['nb_articles'] / total * 100).round(1).astype(str) + '%'
+    agg_display['description'] = agg_display['category'].map(CAT_DESC).fillna('N/A')
+    st.dataframe(agg_display, use_container_width=True, hide_index=True)
+
+    csv = agg_display.to_csv(index=False).encode('utf-8')
+    st.download_button("⬇ Exporter en CSV", csv, "cyberpulse_kpi3.csv", "text/csv")

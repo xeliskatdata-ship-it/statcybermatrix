@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:15
     container_name: cyberpulse_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -14,13 +15,14 @@ services:
     networks:
       - cyberpulse_net
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}" ]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
       interval: 10s
       retries: 5
 
   streamlit:
     image: python:3.11-slim
     container_name: cyberpulse_streamlit
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -40,11 +42,16 @@ services:
     command:
       - bash
       - -c
-      - "apt-get update -qq && apt-get install -y -qq default-libmysqlclient-dev pkg-config gcc && pip install -r requirements.txt psycopg2-binary spacy --quiet && python -m spacy download en_core_web_sm && streamlit run app/app.py --server.port=8501 --server.address=0.0.0.0"
+      - |
+        pip install -r requirements.txt psycopg2-binary spacy deep-translator --quiet \
+        && python -m spacy download en_core_web_sm \
+        && python -m spacy download fr_core_news_sm \
+        && streamlit run app/app.py --server.port=8501 --server.address=0.0.0.0
 
   airflow:
     image: apache/airflow:2.8.0
     container_name: cyberpulse_airflow
+    restart: unless-stopped
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -69,12 +76,21 @@ services:
         condition: service_healthy
     networks:
       - cyberpulse_net
-    command: bash -c "pip install dbt-postgres sqlalchemy pandas requests feedparser python-dotenv && airflow db init && airflow users create --username admin --password admin --firstname Kat --lastname Xelis --role Admin --email kat@cyberpulse.fr ; airflow webserver -p 8080 & airflow scheduler"
+    command: >
+      bash -c "
+        pip install dbt-postgres sqlalchemy pandas requests feedparser python-dotenv --quiet
+        && airflow db init
+        && airflow users create
+           --username admin --password admin
+           --firstname Kat --lastname Xelis
+           --role Admin --email kat@cyberpulse.fr
+        ; airflow webserver -p 8080 & airflow scheduler
+      "
 
 volumes:
   postgres_data:
 
-
 networks:
   cyberpulse_net:
     driver: bridge
+    

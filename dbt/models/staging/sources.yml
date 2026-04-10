@@ -2,8 +2,8 @@ version: 2
 
 sources:
   - name: public
+    description: "Schema PostgreSQL alimente par load_to_db.py"
     tables:
       - name: raw_articles
         description: "Articles bruts collectes par acquisition.py"
-      - name: stg_articles
-        description: "Articles nettoyes par cleaning.py et load_to_db.py"
+        

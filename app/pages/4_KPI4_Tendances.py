@@ -1,64 +1,91 @@
 """
 CyberPulse -- KPI 4
-Threat mention trends over time
-Source de donnees : PostgreSQL (mart_k4)
+Analyse des tendances avec sélecteur temporel dynamique
+Design : fond bokeh, animation ECG, cartes animées (style KPI1)
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from db_connect import get_mart_k4, force_refresh
 
-st.set_page_config(page_title="KPI 4 - Trends", layout="wide")
+st.set_page_config(page_title="CyberPulse - KPI 4 Tendances", layout="wide")
 
-# ── CSS global ────────────────────────────────────────────────────────────────
+
+# ── Helper : titre de section centré (évite la duplication HTML) ──────────────
+def _section_title(text: str, size: str = "1.4rem"):
+    st.markdown(
+        f"<div style='text-align:center;font-family:Roboto Mono,monospace;font-size:{size};"
+        "letter-spacing:.1em;text-transform:uppercase;color:#3b82f6;"
+        "border-bottom:1px solid #3b82f6;padding-bottom:8px;width:fit-content;"
+        f"margin:28px auto 16px'>{text}</div>",
+        unsafe_allow_html=True,
+    )
+
+
+# ── CSS global (style KPI1) ───────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
-html,body,[class*="css"]{font-family:'IBM Plex Sans',sans-serif;}
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;700&display=swap');
+html,body,[class*="css"]{font-family:'Roboto',sans-serif;}
 
-/* FOND SEMI-TRANSPARENT : laisse passer le canvas ECG en dessous.
-   NE PAS utiliser background:#050a14 !important ici — ce serait opaque
-   et masquerait le canvas. On copie la technique de KPI1. */
 .stApp {
     background: radial-gradient(ellipse at 20% 50%, rgba(14,40,80,0.9) 0%, #050a14 60%),
                 radial-gradient(ellipse at 80% 20%, rgba(8,30,60,0.8) 0%, transparent 50%);
     background-color: #050a14 !important;
 }
+.stApp::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        radial-gradient(circle, rgba(59,130,246,0.15) 1px, transparent 1px),
+        radial-gradient(circle, rgba(96,165,250,0.08) 1px, transparent 1px),
+        radial-gradient(circle, rgba(147,197,253,0.06) 1px, transparent 1px);
+    background-size: 80px 80px, 130px 130px, 200px 200px;
+    background-position: 0 0, 40px 40px, 80px 80px;
+    filter: blur(0.8px);
+    z-index: 0;
+    pointer-events: none;
+}
+[data-testid="stAppViewContainer"] > * { position: relative; z-index: 1; }
+[data-testid="stSidebar"] { z-index: 2 !important; background: #0a1628 !important; border-right: 1px solid rgba(30,111,255,0.2); }
+[data-testid="stSidebar"] * { color: #a8b8d0 !important; }
 
-[data-testid="stAppViewContainer"] > * { position:relative; z-index:1; }
-[data-testid="stSidebar"] { z-index:2 !important; background:#0f1422!important; border-right:1px solid #1e2a42; }
-[data-testid="stSidebar"] *{color:#a8b8d0!important;}
-.kpi-tag{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
-letter-spacing:.15em;text-transform:uppercase;color:#14b8a6;background:rgba(20,184,166,.1);
-border:1px solid rgba(20,184,166,.2);border-radius:4px;padding:3px 10px;margin-bottom:14px;}
-.desc-box{background:#0f1422;border:1px solid #1e2a42;border-left:3px solid #14b8a6;
-border-radius:8px;padding:14px 18px;margin-bottom:20px;color:#94a3b8;font-size:0.88rem;line-height:1.7;}
-.insight-box{background:rgba(20,184,166,0.07);border:1px solid rgba(20,184,166,0.2);
-border-radius:8px;padding:12px 18px;margin-top:16px;color:#5eead4;font-size:0.88rem;}
-.warn-box{background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);
-border-radius:8px;padding:10px 16px;margin-top:10px;color:#fcd34d;font-size:0.82rem;}
-.badge-live{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
+.kpi-tag{display:inline-block;font-family:'Roboto Mono',monospace;font-size:0.65rem;
+letter-spacing:.15em;text-transform:uppercase;color:#3b82f6;background:rgba(59,130,246,.1);
+border:1px solid rgba(59,130,246,.2);border-radius:4px;padding:3px 10px;margin-bottom:14px;}
+
+.page-title {
+    text-align: center;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: #3b82f6;
+    margin-bottom: 20px;
+    line-height: 1.2;
+    font-family: 'Roboto', sans-serif;
+}
+
+.badge-live{display:inline-flex;align-items:center;gap:6px;font-family:'Roboto Mono',monospace;
 font-size:0.68rem;letter-spacing:.12em;text-transform:uppercase;
 color:#22c55e;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);
 border-radius:20px;padding:4px 12px;}
-.badge-err{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
-font-size:0.68rem;letter-spacing:.12em;text-transform:uppercase;
-color:#ef4444;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
-border-radius:20px;padding:4px 12px;}
 .dot-live{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.insight-box{background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);
+border-radius:8px;padding:12px 18px;margin-top:16px;color:#93c5fd;font-size:0.88rem;backdrop-filter:blur(8px);}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Fond animé ECG ────────────────────────────────────────────────────────────
+# ── Fond animé ECG (identique KPI1) ──────────────────────────────────────────
 components.html("""
 <script>
 (function() {
@@ -186,263 +213,298 @@ components.html("""
   }
 
   var stop = startECG();
-
   setInterval(function() {
-    if (!p.getElementById('ecg-bg')) {
-      stop && stop();
-      stop = startECG();
-    }
+    var cv = p.getElementById('ecg-bg');
+    if (!cv) { stop && stop(); stop = startECG(); }
   }, 2000);
-
   p.addEventListener('visibilitychange', function() {
-    if (!p.hidden) {
-      stop && stop();
-      stop = startECG();
-    }
+    if (!p.hidden) { stop && stop(); stop = startECG(); }
   });
-
 })();
 </script>
 """, height=0)
 
-
-# Palette par categorie
-CAT_COLORS = {
-    'ransomware'   : '#ef4444',
-    'malware'      : '#f97316',
-    'vulnerability': '#3b82f6',
-    'phishing'     : '#f59e0b',
-    'apt'          : '#a855f7',
-    'data_breach'  : '#ec4899',
-    'supply_chain' : '#14b8a6',
-    'ddos'         : '#22c55e',
-    'general'      : '#64748b',
+# ── Config ────────────────────────────────────────────────────────────────────
+COLORS_MAP = {
+    'vulnerability': '#3b82f6', 'ransomware': '#ef4444', 'phishing': '#f59e0b',
+    'malware': '#a855f7', 'apt': '#14b8a6', 'ddos': '#22c55e',
+    'data_breach': '#6366f1', 'supply_chain': '#ec4899', 'cryptography': '#06b6d4',
+    'defense': '#f97316', 'offensive': '#84cc16', 'compliance': '#0ea5e9',
+    'identity': '#e879f9', 'general': '#64748b',
 }
 
 PLOTLY_BASE = dict(
     paper_bgcolor='rgba(0,0,0,0)',
-    plot_bgcolor='rgba(0,0,0,0)',
-    font=dict(family='IBM Plex Sans', color='#94a3b8'),
+    plot_bgcolor='rgba(5,10,20,0.6)',
+    font=dict(family='Roboto', color='#94a3b8'),
 )
 
-def _rgba(hex_color, alpha):
-    r = int(hex_color[1:3], 16)
-    g = int(hex_color[3:5], 16)
-    b = int(hex_color[5:7], 16)
-    return f'rgba({r},{g},{b},{alpha})'
-
-# ── En-tête ───────────────────────────────────────────────────────────────────
+# ── En-tete ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="kpi-tag">KPI 4</div>', unsafe_allow_html=True)
-st.markdown("### Threat mention trends over time")
-st.markdown("""
-<div class="desc-box">
-    <b>Objective:</b> Track how mentions of a threat evolve day by day.<br>
-    <b>Reading:</b> A spike indicates a major event that day. A persistent rise signals an emerging topic.<br>
-    <b>Data source:</b> PostgreSQL -- table <code>mart_k4</code> (categories by dbt regex, aggregated by date).
-</div>
-""", unsafe_allow_html=True)
-st.markdown("---")
+st.markdown('<div class="page-title">Analyse des Tendances</div>', unsafe_allow_html=True)
 
-# ── Chargement PostgreSQL ─────────────────────────────────────────────────────
-col_refresh, col_badge, _ = st.columns([1, 2, 5])
-
-with col_refresh:
-    if st.button("Refresh", type="primary", use_container_width=True):
+# ── Refresh + badge ───────────────────────────────────────────────────────────
+_, col_r, col_b, _ = st.columns([2, 1, 2, 2])
+with col_r:
+    if st.button("Synchroniser", use_container_width=True):
         force_refresh()
         st.rerun()
 
+# ── Chargement ────────────────────────────────────────────────────────────────
 try:
-    df_raw  = get_mart_k4()
-    load_ok = True
+    df_raw = get_mart_k4()
+    if not df_raw.empty:
+        df_raw['published_date'] = pd.to_datetime(df_raw['published_date']).dt.normalize()
+    load_ok = not df_raw.empty
     load_ts = datetime.now().strftime('%H:%M:%S')
-except Exception as e:
-    load_ok  = False
-    load_err = str(e)
-
-with col_badge:
-    if load_ok:
+    with col_b:
         st.markdown(
             f'<div class="badge-live"><span class="dot-live"></span>'
-            f'PostgreSQL · {load_ts}</div>',
+            f'LIVE - MaJ {load_ts} - {int(df_raw["nb_mentions"].sum()):,} mentions</div>',
             unsafe_allow_html=True,
         )
-    else:
-        st.markdown('<div class="badge-err">✗ Erreur connexion</div>', unsafe_allow_html=True)
+except Exception as e:
+    st.error(f"Connexion PostgreSQL impossible : {e}")
+    st.stop()
 
 if not load_ok:
-    st.error(f"Could not connect to PostgreSQL : {load_err}\n\nCheck that Docker is running.")
+    st.warning("mart_k4 est vide. Lance `dbt run` depuis le dossier dbt/.")
     st.stop()
 
-if df_raw.empty:
-    st.warning("mart_k4 is empty. Run `dbt run --select mart_k4`.")
-    st.stop()
-
-# ── Filtres ───────────────────────────────────────────────────────────────────
-col_f1, col_f2, col_f3 = st.columns(3)
-
-with col_f1:
-    periode_opts = {
-        "Last 7 days" : 7,
-        "Last 14 days": 14,
-        "Last 30 days": 30,
-        "Show all"    : None,
+# ── Filtres sidebar ───────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### Analyse Temporelle")
+    options_temps = {
+        "Dernieres 24 heures": 1,
+        "7 derniers jours": 7,
+        "14 derniers jours": 14,
+        "30 derniers jours": 30,
+        "Historique complet": None,
     }
-    periode_lbl = st.selectbox("Time window", list(periode_opts.keys()), key="k4_per")
-    n_days = periode_opts[periode_lbl]
+    choix_temps = st.selectbox("Fenetre d'observation", list(options_temps.keys()), index=1)
+    nb_jours = options_temps[choix_temps]
 
-with col_f2:
-    cats_dispo = sorted([c for c in df_raw['category'].dropna().unique() if c != 'general'])
-    cats_dispo_all = cats_dispo + (['general'] if 'general' in df_raw['category'].values else [])
-    menace1 = st.selectbox("Primary threat", cats_dispo, key="k4_m1")
+    st.markdown("---")
+    cats_dispo = sorted(df_raw['category'].unique().tolist())
+    target = st.selectbox("Vecteur cible", cats_dispo)
+    show_global = st.checkbox("Comparer au volume total", value=True)
 
-with col_f3:
-    comparer = st.checkbox("Compare with other threats", key="k4_cmp")
+# ── Filtrage temporel ─────────────────────────────────────────────────────────
+df = df_raw.copy()
+if nb_jours:
+    date_limite = df_raw['published_date'].max() - timedelta(days=nb_jours)
+    df = df[df['published_date'] >= date_limite]
 
-menaces_extra = []
-if comparer:
-    cats_reste = [c for c in cats_dispo_all if c != menace1]
-    menaces_extra = st.multiselect(
-        "Threats to compare (max 3)",
-        cats_reste,
-        default=cats_reste[:1] if cats_reste else [],
-        max_selections=3,
-        key="k4_extra",
+# ── Calcul des series ─────────────────────────────────────────────────────────
+def _build_trend(df_in, category, window_ma=7):
+    """Serie temporelle avec MA et z-score pour une categorie donnee."""
+    s = (
+        df_in[df_in['category'] == category]
+        .groupby('published_date')['nb_mentions']
+        .sum()
+        .reset_index(name='val')
     )
+    if s.empty:
+        return s
 
-col_o1, col_o2, col_o3 = st.columns(3)
-with col_o1:
-    show_ma  = st.checkbox("7-day moving average", value=True, key="k4_ma")
-with col_o2:
-    stacked  = st.checkbox("Stacked areas (if comparing)", value=False, key="k4_stack")
-with col_o3:
-    excl_gen = st.checkbox("Exclude 'general'", value=True, key="k4_gen")
+    # Reindex sur plage continue pour combler les jours sans publication
+    idx = pd.date_range(s['published_date'].min(), s['published_date'].max())
+    s = s.set_index('published_date').reindex(idx, fill_value=0).rename_axis('date').reset_index()
 
-# ── Filtrage ──────────────────────────────────────────────────────────────────
-dff = df_raw.copy()
-if n_days:
-    cutoff = pd.Timestamp.now() - pd.Timedelta(days=n_days)
-    dff = dff[dff['published_date'] >= cutoff]
-if excl_gen:
-    dff = dff[dff['category'] != 'general']
+    w = min(window_ma, len(s))
+    s['ma'] = s['val'].rolling(window=w, min_periods=1).mean()
+    s['std'] = s['val'].rolling(window=w, min_periods=1).std()
+    s['zscore'] = (s['val'] - s['ma']) / s['std'].replace(0, np.nan)
+    return s
 
-def get_serie(df, cat):
-    sub = df[df['category'] == cat][['published_date', 'nb_mentions']].copy()
-    sub = sub.rename(columns={'published_date': 'date'})
-    sub['date'] = pd.to_datetime(sub['date']).dt.normalize()
-    sub = sub.groupby('date')['nb_mentions'].sum().reset_index()
-    if sub.empty:
-        return sub
-    idx = pd.date_range(sub['date'].min(), sub['date'].max(), freq='D')
-    sub = sub.set_index('date').reindex(idx, fill_value=0).reset_index()
-    sub.columns = ['date', 'mentions']
-    return sub
 
-t1 = get_serie(dff, menace1)
+data_target = _build_trend(df, target)
 
-if t1.empty:
-    st.markdown('<div class="warn-box">No data for this threat. Try another category or extend the window.</div>', unsafe_allow_html=True)
-    st.stop()
+# Volume global par jour — vectorise sans boucle
+data_global = (
+    df.groupby('published_date')['nb_mentions']
+    .sum()
+    .reset_index()
+    .rename(columns={'published_date': 'date', 'nb_mentions': 'val'})
+)
 
-# ── Graphique ─────────────────────────────────────────────────────────────────
-all_menaces = [menace1] + menaces_extra
-palette = ['#14b8a6','#f59e0b','#ef4444','#a855f7','#3b82f6','#22c55e','#f97316','#ec4899']
+# ── Metriques animees ─────────────────────────────────────────────────────────
+_section_title(f"Vue d'ensemble - {target.upper()}")
+
+if not data_target.empty:
+    latest_val = int(data_target.iloc[-1]['val'])
+    total_period = int(data_target['val'].sum())
+    global_total = data_global['val'].sum()
+    part = round(total_period / global_total * 100, 1) if global_total > 0 else 0
+
+    # Delta entre seconde et premiere moitie — plus fiable que le seuil 50%
+    half = len(data_target) // 2
+    if half > 0:
+        v_first = data_target['val'].head(half).sum()
+        v_second = data_target['val'].tail(half).sum()
+        delta_pct = round((v_second - v_first) / max(v_first, 1) * 100)
+        activite = "HAUSSE" if delta_pct > 15 else ("BAISSE" if delta_pct < -15 else "STABLE")
+    else:
+        delta_pct = 0
+        activite = "STABLE"
+
+    activite_color = {"HAUSSE": "#ef4444", "BAISSE": "#14b8a6", "STABLE": "#22c55e"}[activite]
+
+    components.html(f"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;700&display=swap');
+    * {{ box-sizing:border-box; margin:0; padding:0; }}
+    body {{ background:transparent; font-family:'Roboto',sans-serif; }}
+    .grid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }}
+    .card {{
+        background:rgba(15,20,34,0.85); border:1px solid #1e2a42; border-radius:10px;
+        padding:28px 20px; text-align:center; position:relative; overflow:hidden;
+        transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s; cursor:default;
+        backdrop-filter:blur(8px);
+    }}
+    .card::before {{ content:''; position:absolute; top:0; left:0; width:100%; height:3px; border-radius:10px 10px 0 0; }}
+    .card:nth-child(1)::before {{ background:#3b82f6; }}
+    .card:nth-child(2)::before {{ background:#14b8a6; }}
+    .card:nth-child(3)::before {{ background:#f59e0b; }}
+    .card:nth-child(4)::before {{ background:{activite_color}; }}
+    .card:hover {{ border-color:#3b82f6; transform:translateY(-3px); box-shadow:0 8px 28px rgba(59,130,246,0.18); background:rgba(20,28,48,0.95); }}
+    .val {{ font-family:'Roboto Mono',monospace; font-size:3rem; font-weight:700; color:#e2e8f0; }}
+    .lbl {{ font-size:1rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; margin-top:10px; }}
+    .sub {{ font-size:1.1rem; margin-top:8px; font-weight:500; }}
+    </style>
+    <div class="grid">
+      <div class="card">
+        <div class="val" id="v1">0</div>
+        <div class="lbl">Volume Periode</div>
+        <div class="sub" style="color:#3b82f6">Mentions cumulees</div>
+      </div>
+      <div class="card">
+        <div class="val" id="v2">0</div>
+        <div class="lbl">Derniere Valeur</div>
+        <div class="sub" style="color:#14b8a6">Sur 24h</div>
+      </div>
+      <div class="card">
+        <div class="val" id="v3">0</div>
+        <div class="lbl">Part de Voix</div>
+        <div class="sub" style="color:#f59e0b">Du flux global</div>
+      </div>
+      <div class="card">
+        <div class="val">{activite}</div>
+        <div class="lbl">Tendance</div>
+        <div class="sub" style="color:{activite_color}">{delta_pct:+d}% vs periode precedente</div>
+      </div>
+    </div>
+    <script>
+    function animCount(id, target, duration, isFloat, suffix) {{
+      var el = document.getElementById(id);
+      if (!el || isNaN(target)) return;
+      var step = target / (duration / 16), current = 0;
+      var timer = setInterval(function() {{
+        current += step;
+        if (current >= target) {{ current = target; clearInterval(timer); }}
+        el.textContent = isFloat
+          ? current.toFixed(1).replace('.',',') + (suffix || '')
+          : Math.floor(current).toLocaleString('fr-FR') + (suffix || '');
+      }}, 16);
+    }}
+    animCount('v1', {total_period}, 1200, false, '');
+    animCount('v2', {latest_val}, 800, false, '');
+    animCount('v3', {part}, 1000, true, '%');
+    </script>
+    """, height=160)
+
+# ── Graphique principal ───────────────────────────────────────────────────────
+_section_title(f"Evolution temporelle - {choix_temps}")
+
+target_color = COLORS_MAP.get(target, '#14b8a6')
+
 fig = go.Figure()
 
-for idx, cat in enumerate(all_menaces):
-    serie = get_serie(dff, cat) if cat != menace1 else t1
-    if serie.empty:
-        continue
-    col_hex = CAT_COLORS.get(cat, palette[idx % len(palette)])
+if show_global and not data_global.empty:
+    fig.add_trace(go.Scatter(
+        x=data_global['date'], y=data_global['val'], name="Volume Global",
+        line=dict(color='rgba(148,163,184,0.2)', width=1), fill='tozeroy',
+        fillcolor='rgba(148,163,184,0.05)',
+    ))
 
-    if stacked and len(all_menaces) > 1:
-        fig.add_trace(go.Scatter(
-            x=serie['date'], y=serie['mentions'], name=cat, mode='lines',
-            line=dict(color=col_hex, width=1.5),
-            stackgroup='one', fillcolor=_rgba(col_hex, 0.33),
-        ))
-    else:
-        fig.add_trace(go.Scatter(
-            x=serie['date'], y=serie['mentions'], name=cat, mode='lines+markers',
-            line=dict(color=col_hex, width=2.5), marker=dict(size=5),
-            fill='tozeroy' if idx == 0 and len(all_menaces) == 1 else None,
-            fillcolor=_rgba(col_hex, 0.08) if idx == 0 and len(all_menaces) == 1 else None,
-        ))
+if not data_target.empty:
+    fig.add_trace(go.Scatter(
+        x=data_target['date'], y=data_target['val'], name=target,
+        line=dict(color=target_color, width=3),
+        mode='lines+markers',
+        marker=dict(size=8, color=target_color, line=dict(width=1, color='#050a14')),
+        hovertemplate='<b>%{x|%d/%m}</b><br>%{y} mentions<extra></extra>',
+    ))
 
-    if show_ma and len(serie) >= 3:
-        ma = serie['mentions'].rolling(window=7, min_periods=1).mean().round(1)
+    if len(data_target) > 3:
         fig.add_trace(go.Scatter(
-            x=serie['date'], y=ma, name=f"{cat} (7d avg)", mode='lines',
-            line=dict(color=col_hex, width=1.5, dash='dot'), opacity=0.6,
+            x=data_target['date'], y=data_target['ma'], name="Lissage (MA)",
+            line=dict(color='#f59e0b', width=2, dash='dot'),
         ))
 
 fig.update_layout(
     **PLOTLY_BASE,
-    xaxis=dict(gridcolor='#1e2a42', title='Date'),
-    yaxis=dict(gridcolor='#1e2a42', title='Mentions / jour'),
-    legend=dict(orientation='h', yanchor='bottom', y=1.02,
-                bgcolor='rgba(15,20,34,0.8)', bordercolor='#1e2a42', borderwidth=1),
-    hovermode='x unified', height=460,
-    margin=dict(l=20, r=20, t=60, b=20),
-    title=(f"Trend: '{menace1}'"
-           + (f" vs {len(menaces_extra)} other(s)" if menaces_extra else "")
-           + f" -- {periode_lbl.lower()}"),
+    hovermode='x unified',
+    height=450,
+    margin=dict(t=20, b=20),
+    xaxis=dict(gridcolor='#1e2a42', title="Chronologie", tickfont=dict(size=14)),
+    yaxis=dict(gridcolor='#1e2a42', title="Mentions", tickfont=dict(size=14)),
+    legend=dict(font=dict(size=13)),
 )
+
 st.plotly_chart(fig, use_container_width=True)
 
-# ── Métriques ─────────────────────────────────────────────────────────────────
-idx_max = t1['mentions'].idxmax()
-total_m = int(t1['mentions'].sum())
-peak_v  = int(t1.loc[idx_max, 'mentions'])
-peak_d  = str(t1.loc[idx_max, 'date'])[:10]
-moy     = round(t1['mentions'].mean(), 1)
-last7   = int(t1.tail(7)['mentions'].sum())
-prev7   = int(t1.iloc[max(0, len(t1)-14):max(0, len(t1)-7)]['mentions'].sum())
-delta7  = last7 - prev7
+# ── Interpretation & Insights ─────────────────────────────────────────────────
+if not data_target.empty and total_period > 0:
+    moy = round(data_target['val'].mean(), 1)
+    pic_idx = data_target['val'].idxmax()
+    pic_date = data_target.loc[pic_idx, 'date'].strftime('%d/%m/%Y')
+    pic_val = int(data_target.loc[pic_idx, 'val'])
 
-m1c, m2c, m3c, m4c = st.columns(4)
-m1c.metric("Total mentions",   f"{total_m:,}")
-m2c.metric("Pic",              f"{peak_v} le {peak_d}")
-m3c.metric("Moy. quotidienne", f"{moy}/j")
-m4c.metric("Last 7 days",      f"{last7:,}", f"{delta7:+d} vs prev. 7d")
+    # Jours avec z-score > 2 = anomalies statistiques
+    nb_anomalies = int((data_target['zscore'].abs() > 2).sum())
 
-st.markdown(f"""
-<div class="insight-box">
-    <b>Insights for '{menace1}':</b><br>
-    Total: <b>{total_m:,}</b> mentions. Peak: <b>{peak_d}</b> ({peak_v} mentions).
-    Average: <b>{moy}</b>/day.
-    {"<br>⚠️ Rising trend: +{} vs previous 7 days.".format(delta7) if delta7 > 0 else ""}
-</div>
-""", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="insight-box">
+        <b>Interpretation & Insights</b><br><br>
+        - <b>Tendance :</b> {target} totalise {total_period:,} mentions sur la periode ({choix_temps}).
+          Moyenne quotidienne : <b>{moy}</b>. Pic : <b>{pic_date}</b> ({pic_val} mentions).<br>
+        - <b>Anomalies :</b> {nb_anomalies} jour(s) avec z-score > 2 sur la periode.
+          {'Plusieurs pics anormaux detectes — verifier si un evenement majeur (0-day, breach) explique ces depassements.' if nb_anomalies > 2 else 'Pas de decrochage statistique significatif.'}<br>
+        - <b>Action :</b> si la part de voix ({part}%) est disproportionnee par rapport aux incidents
+          reels du SOC, envisager de recalibrer les poids de classification pour ce vecteur.
+    </div>
+    """, unsafe_allow_html=True)
 
-# ── Tableau ───────────────────────────────────────────────────────────────────
-st.markdown("---")
-st.markdown("**Summary over the period**")
-recap_rows = []
-for cat in all_menaces:
-    serie = get_serie(dff, cat)
-    if serie.empty:
-        continue
-    recap_rows.append({
-        "Menace"        : cat,
-        "Total mentions": int(serie['mentions'].sum()),
-        "Pic"           : int(serie['mentions'].max()),
-        "Peak day"      : str(serie.loc[serie['mentions'].idxmax(), 'date'])[:10],
-        "Avg / day"     : round(serie['mentions'].mean(), 1),
-        "Last 7d"       : int(serie.tail(7)['mentions'].sum()),
-    })
-if recap_rows:
-    st.dataframe(
-        pd.DataFrame(recap_rows).sort_values("Total mentions", ascending=False),
-        use_container_width=True, hide_index=True,
-    )
+# ── Comparatif des menaces ────────────────────────────────────────────────────
+_section_title(f"Comparatif des vecteurs - {choix_temps}")
 
-# ── Export ────────────────────────────────────────────────────────────────────
-st.markdown("---")
-export_df = dff[dff['category'].isin(all_menaces)].copy()
-export_df['published_date'] = export_df['published_date'].dt.strftime('%Y-%m-%d')
-csv = export_df.sort_values(['published_date','category']).to_csv(index=False).encode('utf-8')
-st.download_button(
-    "Download data (CSV)", csv,
-    file_name=f"kpi4_tendances_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-    mime="text/csv",
+# Vectorise — remplace la boucle for c in cats_dispo
+df_comp = (
+    df.groupby('category', as_index=False)['nb_mentions']
+    .sum()
+    .rename(columns={'category': 'Vecteur', 'nb_mentions': 'Total Mentions'})
+    .sort_values('Total Mentions', ascending=False)
 )
+
+fig_comp = go.Figure(go.Bar(
+    x=df_comp['Total Mentions'],
+    y=df_comp['Vecteur'],
+    orientation='h',
+    marker_color=[COLORS_MAP.get(c, '#3b82f6') for c in df_comp['Vecteur']],
+    hovertemplate='<b>%{y}</b><br>%{x} mentions<extra></extra>',
+))
+fig_comp.update_layout(
+    **PLOTLY_BASE,
+    height=max(300, len(df_comp) * 40),
+    margin=dict(l=20, r=20, t=10, b=20),
+    xaxis=dict(gridcolor='#1e2a42', tickfont=dict(size=14)),
+    yaxis=dict(gridcolor='#1e2a42', tickfont=dict(size=14, color='#cbd5e1')),
+)
+st.plotly_chart(fig_comp, use_container_width=True)
+
+# ── Detail donnees ────────────────────────────────────────────────────────────
+with st.expander("Details des donnees brutes"):
+    st.dataframe(df_comp, use_container_width=True, hide_index=True)
+    csv = df_comp.to_csv(index=False).encode('utf-8')
+    st.download_button("Exporter en CSV", csv, "cyberpulse_kpi4.csv", "text/csv")
