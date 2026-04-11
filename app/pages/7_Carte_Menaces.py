@@ -17,7 +17,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "src"))
-from db_connect import get_mart_k7, get_stg_articles, force_refresh
+from db_connect import get_stg_articles, force_refresh
 
 st.set_page_config(
     page_title="Carte de veille cyber par categorie de menaces",
