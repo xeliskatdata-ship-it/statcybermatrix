@@ -3,207 +3,364 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StatCyberMatrix -- Carte de veille cyber</title>
+  <title>StatCyberMatrix -- Carte de veille cyber (Cyber War Room Edition)</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <style>
+    /* ============================================================
+       1. VARIABLES & RESET (Deep Cyber Palette)
+       ============================================================ */
     *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:100vw;height:100vh;overflow:hidden;background:#050a14;font-family:'Syne',sans-serif;color:#e8f0fe}
-    :root{--bg:#050a14;--bg2:#0a1628;--bg3:#0f1f35;--blue:#1e6fff;--cyan:#00d4ff;--green:#22c55e;--text:#e8f0fe;--muted:#7a9cc8;--border:rgba(30,111,255,0.2);--red:#ef4444;--orange:#f97316;--amber:#f59e0b;--purple:#a855f7;--sb-w:300px;--rp-w:440px}
-    @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.4)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
-    @keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-    @keyframes marker-glow{0%,100%{transform:scale(1);opacity:var(--mk-op,1)}50%{transform:scale(1.2);opacity:calc(var(--mk-op,1)*0.5)}}
-    @keyframes marker-ring{0%{transform:scale(1);opacity:0.45}100%{transform:scale(2.2);opacity:0}}
-    .mk-wrap{position:relative;display:flex;align-items:center;justify-content:center}
-    .mk-dot{border-radius:50%;animation:marker-glow 2.5s ease-in-out infinite;animation-delay:var(--mk-delay,0s);z-index:2}
-    .mk-ring{position:absolute;top:50%;left:50%;width:100%;height:100%;margin-top:-50%;margin-left:-50%;border-radius:50%;border:1px solid var(--mk-color);animation:marker-ring 3s ease-out infinite;animation-delay:var(--mk-delay,0s);z-index:1}
-    .mk-ring2{position:absolute;top:50%;left:50%;width:100%;height:100%;margin-top:-50%;margin-left:-50%;border-radius:50%;border:1px solid var(--mk-color);animation:marker-ring 3s ease-out infinite 1.5s;z-index:1}
-    nav{position:fixed;top:0;left:0;right:0;height:44px;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,10,20,0.95);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}
-    .nav-logo{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--cyan);display:flex;align-items:center;gap:8px}
-    .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
-    .nav-stats{display:flex;gap:16px;font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted)}
-    .nav-stats strong{color:var(--text)}
-    #sidebar{position:fixed;top:44px;left:0;bottom:0;width:var(--sb-w);z-index:500;background:rgba(5,10,20,0.95);border-right:1px solid var(--border);backdrop-filter:blur(12px);overflow-y:hidden;display:flex;flex-direction:column;transition:transform .3s ease}
-    #sidebar.collapsed{transform:translateX(calc(-1 * var(--sb-w)))}
-    #sb-toggle{position:fixed;top:50%;z-index:600;width:24px;height:48px;background:rgba(5,10,20,0.95);border:1px solid var(--border);border-left:none;border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:.7rem;transition:left .3s ease;left:var(--sb-w)}
-    #sb-toggle.collapsed{left:0px}
-    #sb-toggle:hover{color:var(--cyan);background:rgba(30,111,255,0.15)}
-    .sb-section{padding:7px 12px;border-bottom:1px solid var(--border)}
-    .sb-title{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-    .layer-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;cursor:pointer}
-    .layer-left{display:flex;align-items:center;gap:6px}
-    .layer-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-    .layer-name{font-size:.82rem;font-weight:600}
-    .layer-count{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted)}
-    .toggle{width:28px;height:15px;border-radius:8px;background:var(--blue);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
-    .toggle.off{background:rgba(255,255,255,.1)}
-    .toggle::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:transform .2s}
-    .toggle.on::after{transform:translateX(13px)}
-    .src-item{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted);padding:1px 0;line-height:1.6}
-    .country-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
-    .country-name{font-size:.78rem;color:var(--text)}
-    .country-code{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--cyan);margin-right:4px}
-    .country-n{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted)}
-    #map{position:fixed;top:44px;left:var(--sb-w);right:var(--rp-w);bottom:0;z-index:1;transition:left .3s ease}
-    #map.sb-collapsed{left:0}
-    #map .leaflet-tile-pane{filter:brightness(0.85) saturate(1.3) hue-rotate(10deg)}
-    #right-panel{position:fixed;top:44px;right:0;bottom:0;width:var(--rp-w);z-index:500;background:rgba(5,10,20,0.95);border-left:1px solid var(--border);backdrop-filter:blur(12px);overflow-y:auto;display:flex;flex-direction:column}
-    .rp-section{padding:7px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
-    .rp-title{font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;display:flex;align-items:center;gap:6px}
-    .defcon-row{display:flex;gap:4px;justify-content:center;margin:3px 0}
-    .defcon-btn{width:30px;height:30px;border-radius:6px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:700;color:rgba(255,255,255,.25)}
-    .defcon-btn.active{color:#fff}
-    .defcon-lbl{text-align:center;font-family:'JetBrains Mono',monospace;font-size:.62rem;margin-top:2px}
-    .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-    .stat-card{background:rgba(30,42,66,.5);border:1px solid var(--border);border-radius:6px;padding:5px 8px}
-    .stat-n{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--cyan)}
-    .stat-l{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:1px}
-    .ticker-wrap{overflow:hidden;height:18px;position:relative}
-    .ticker{display:flex;gap:20px;white-space:nowrap;animation:tick 40s linear infinite;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--text)}
-    .ticker:hover{animation-play-state:paused}
-    .t-item{display:flex;align-items:center;gap:4px;flex-shrink:0}
-    .t-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0}
-    .threat-row{margin-bottom:4px}
-    .threat-top{display:flex;justify-content:space-between;margin-bottom:1px}
-    .threat-name{font-size:.7rem;color:var(--text)}
-    .threat-val{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted)}
-    .threat-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.07)}
-    .threat-fill{height:100%;border-radius:2px;transition:width .5s ease}
-    .pscore-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
-    .pflag{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--cyan);width:22px;text-align:center;flex-shrink:0}
-    .pname{font-size:.72rem;color:var(--text);flex:1}
-    .pn{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted);flex-shrink:0}
-    .pbar{width:55px;height:3px;border-radius:2px;background:rgba(255,255,255,.07);flex-shrink:0}
-    .pbar-fill{height:100%;border-radius:2px}
-    .yt-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
-    .yt-tab{font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'JetBrains Mono',monospace}
-    .yt-tab.active{background:rgba(30,111,255,.2);color:#93c5fd;border-color:var(--blue)}
-    .res-link{display:block;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--cyan);text-decoration:none;padding:5px 0;border-bottom:1px solid rgba(30,111,255,0.08)}
-    .res-link:hover{color:var(--text);background:rgba(30,111,255,0.05)}
-    .cyber-popup .leaflet-popup-content-wrapper{background:rgba(10,22,40,.97);border:1px solid var(--border);border-radius:8px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.5)}
-    .cyber-popup .leaflet-popup-tip{background:rgba(10,22,40,.97)}
-    .pp-cat{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
-    .pp-title{font-size:.85rem;font-weight:700;margin-bottom:3px;line-height:1.3}
-    .pp-meta{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted)}
-    .pp-kw{margin-top:6px;display:flex;flex-wrap:wrap;gap:3px}
-    .pp-kw span{font-family:'JetBrains Mono',monospace;font-size:.6rem;padding:1px 6px;border-radius:3px;background:rgba(30,111,255,.15);color:#93c5fd}
-    .pp-conf{display:flex;align-items:center;gap:6px;margin-top:6px}
-    .pp-conf-bar-wrap{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.1)}
-    .pp-conf-bar{height:100%;border-radius:2px;transition:width .4s ease}
-    .pp-conf-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;white-space:nowrap}
-    .pp-conf-score{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted);white-space:nowrap}
-    #timeline{position:fixed;bottom:50px;left:calc(var(--sb-w) + (100vw - var(--sb-w) - var(--rp-w))/2);transform:translateX(-50%);z-index:700;background:rgba(5,10,20,.95);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;padding:6px 14px;display:flex;align-items:center;gap:10px;transition:left .3s ease}
-    .tl-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:3px 10px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s}
-    .tl-btn.active,.tl-btn:hover{background:rgba(30,111,255,.2);color:var(--text);border-color:var(--blue)}
-    #legend{position:fixed;bottom:50px;right:calc(var(--rp-w) + 16px);z-index:700;background:rgba(5,10,20,.95);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
-    .leg-row{display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:.7rem}
-    .leg-dot{border-radius:50%;flex-shrink:0}
+    html,body{width:100vw;height:100vh;overflow:hidden;background:#010409;font-family:'Syne',sans-serif;color:#e8f0fe}
+    
+    :root {
+        --bg: #010409; /* Fond presque noir pour plus de contraste */
+        --bg-panel: rgba(10, 20, 40, 0.7); /* Transparence pour Glassmorphism */
+        --blue-neon: #1e6fff; 
+        --cyan-neon: #00d4ff; 
+        --green-neon: #00ff41; /* Vert Matrix plus agressif */
+        --text: #e8f0fe;
+        --muted: #7a9cc8;
+        --border: rgba(30,111,255,0.15); /* Bordures discrètes */
+        --red-neon: #ff003c; /* Rouge électrique */
+        --orange-neon: #ff9f00;
+        --sb-w: 280px;
+        --rp-w: 400px;
+    }
+
+    /* ============================================================
+       2. ANIMATIONS & KEYFRAMES (Look technologique)
+       ============================================================ */
+    @keyframes pulse-neon {
+        0%, 100% { opacity: 1; box-shadow: 0 0 5px var(--green-neon), 0 0 10px var(--green-neon); }
+        50% { opacity: 0.5; box-shadow: 0 0 2px var(--green-neon); }
+    }
+    @keyframes marker-ring {
+        0% { transform: scale(1); opacity: 0.6; }
+        100% { transform: scale(2.5); opacity: 0; }
+    }
+    @keyframes scanline {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+    }
+
+    /* Effet de scanline global pour l'immersion */
+    body::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 2px);
+        pointer-events: none;
+        z-index: 10000;
+    }
+
+    /* ============================================================
+       3. NAVIGATION (TOP BAR)
+       ============================================================ */
+    nav {
+        position: fixed; top: 0; left: 0; right: 0; height: 40px;
+        z-index: 1000; display: flex; align-items: center; justify-content: space-between;
+        padding: 0 16px; background: rgba(1, 4, 9, 0.9);
+        border-bottom: 1px solid var(--border); backdrop-filter: blur(10px);
+    }
+    .nav-logo {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+        color: var(--cyan-neon); font-weight: 700;
+        text-shadow: 0 0 8px var(--cyan-neon);
+    }
+    .live-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: var(--green-neon); animation: pulse-neon 1.5s infinite;
+        display: inline-block; margin-right: 8px;
+    }
+    .nav-stats {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted);
+    }
+    .nav-stats strong { color: var(--text); font-weight: 700; }
+
+    /* ============================================================
+       4. SIDEBAR (PANNEAU GAUCHE - Glassmorphism)
+       ============================================================ */
+    #sidebar {
+        position: fixed; top: 40px; left: 0; bottom: 0;
+        width: var(--sb-w); z-index: 500;
+        background: var(--bg-panel); backdrop-filter: blur(15px); /* Flou plus fort */
+        border-right: 1px solid var(--border);
+        box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+        display: flex; flex-direction: column;
+        transition: transform 0.3s ease;
+    }
+    #sidebar.collapsed { transform: translateX(calc(-1 * var(--sb-w))); }
+
+    /* Titres de sections agressifs avec dégradé */
+    .sb-title, .rp-title {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+        text-transform: uppercase; color: #fff;
+        background: linear-gradient(90deg, rgba(30,111,255,0.3), transparent);
+        padding: 5px 10px; border-left: 3px solid var(--cyan-neon);
+        margin-bottom: 10px; margin-top: 5px;
+    }
+
+    /* Uniformisation des textes dans la sidebar */
+    .layer-name, .country-name, .src-item {
+        font-size: 0.75rem; color: var(--text); font-weight: 500;
+    }
+    .layer-count, .country-n {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--muted);
+    }
+    .country-code {
+        color: var(--cyan-neon); font-family: 'JetBrains Mono', monospace;
+        margin-right: 6px;
+    }
+
+    /* Suppression des barres de défilement pour le look épuré */
+    #sidebar::-webkit-scrollbar, #right-panel::-webkit-scrollbar { display: none; }
+
+    /* ============================================================
+       5. MAP (Look "Radar bleuté")
+       ============================================================ */
+    #map {
+        position: fixed; top: 40px; left: var(--sb-w); right: var(--rp-w); bottom: 0;
+        z-index: 1; transition: left 0.3s ease;
+        /* FILTRE CRUCIAL : STYLISATION CYBER DE LA CARTE */
+        filter: brightness(0.5) contrast(1.1) saturate(1.4) hue-rotate(185deg);
+    }
+    #map.sb-collapsed { left: 0; }
+
+    /* NOUVEAU DESIGN DES MARKERS (Type Radar) */
+    .mk-wrap { display: flex; align-items: center; justify-content: center; position: relative; }
+    .mk-dot {
+        border-radius: 50%; z-index: 2;
+        box-shadow: 0 0 10px var(--mk-color), 0 0 20px var(--mk-color); /* Glow fort */
+    }
+    .mk-ring {
+        position: absolute; width: 100%; height: 100%;
+        border-radius: 50%; border: 2px solid var(--mk-color);
+        animation: marker-ring 2.5s ease-out infinite; z-index: 1;
+    }
+
+    /* ============================================================
+       6. RIGHT PANEL (Statistiques & Defcon)
+       ============================================================ */
+    #right-panel {
+        position: fixed; top: 40px; right: 0; bottom: 0;
+        width: var(--rp-w); z-index: 500;
+        background: var(--bg-panel); backdrop-filter: blur(15px);
+        border-left: 1px solid var(--border);
+        box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+        display: flex; flex-direction: column; overflow-y: auto;
+    }
+    .rp-section { padding: 8px 15px; border-bottom: 1px solid var(--border); }
+
+    /* Design des boutons DEFCON */
+    .defcon-btn {
+        width: 32px; height: 32px; border-radius: 4px;
+        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+        font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+        color: rgba(255,255,255,0.3); transition: all 0.2s;
+    }
+    .defcon-btn.active { color: #fff; box-shadow: 0 0 15px currentColor; }
+
+    /* Amélioration des cartes de statistiques */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card {
+        background: rgba(30, 42, 66, 0.3); border: 1px solid var(--border);
+        border-radius: 6px; padding: 8px 12px;
+    }
+    .stat-n { font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; color: var(--cyan-neon); text-shadow: 0 0 5px var(--cyan-neon); }
+    .stat-l { font-size: 0.55rem; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+    /* Barres de progression Top Menaces */
+    .threat-bar { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; }
+    .threat-fill { height: 100%; border-radius: 2px; box-shadow: 0 0 5px currentColor; }
+
+    /* ============================================================
+       7. POPUPS (UI Custom)
+       ============================================================ */
+    .cyber-popup .leaflet-popup-content-wrapper {
+        background: rgba(2, 6, 23, 0.95) !important;
+        border: 1px solid var(--blue-neon);
+        border-radius: 4px; color: var(--text);
+        box-shadow: 0 0 20px rgba(30,111,255,0.3);
+    }
+    .cyber-popup .leaflet-popup-tip { background: var(--blue-neon); }
+    .pp-title { font-size: 0.9rem; font-weight: 700; color: #fff; }
+    .pp-meta { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--muted); margin-top: 2px; }
+    .pp-kw span {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.55rem;
+        background: rgba(0, 212, 255, 0.1); color: var(--cyan-neon);
+        border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 2px;
+    }
+
+    /* ============================================================
+       8. TIMELINE & LEGEND
+       ============================================================ */
+    #timeline, #legend {
+        background: var(--bg-panel); backdrop-filter: blur(10px);
+        border: 1px solid var(--border); border-radius: 4px;
+        z-index: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+    }
+    .tl-btn {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+        background: transparent; border: 1px solid var(--border); color: var(--muted);
+        border-radius: 2px; cursor: pointer; transition: all 0.2s;
+    }
+    .tl-btn.active, .tl-btn:hover { background: rgba(30,111,255,0.2); color: #fff; border-color: var(--blue-neon); }
+
+    /* Bouton toggle sidebar */
+    #sb-toggle {
+        background: var(--bg-panel); backdrop-filter: blur(10px);
+        border: 1px solid var(--border); border-radius: 0 4px 4px 0;
+        z-index: 600; color: var(--cyan-neon); transition: all 0.3s ease;
+    }
+    #sb-toggle:hover { background: rgba(0, 212, 255, 0.1); }
   </style>
 </head>
 <body>
   <nav>
-    <div class="nav-logo"><div class="live-dot"></div>StatCyberMatrix / Carte de veille cyber par categorie de menaces</div>
-    <div class="nav-stats"><div><strong id="n-events">0</strong> evenements</div><div><strong id="n-countries">0</strong> pays touches</div><div><strong id="n-layers">4</strong> categories actives</div></div>
+    <div class="nav-logo"><div class="live-dot"></div>StatCyberMatrix // Threat Map</div>
+    <div class="nav-stats">
+        <div><strong id="n-events">0</strong> evenements analysés</div>
+        <div style="margin-left:15px;"><strong id="n-countries">0</strong> pays impactés</div>
+    </div>
   </nav>
-  <div id="sb-toggle" onclick="toggleSidebar()">&#9664;</div>
+
+  <div id="sb-toggle" onclick="toggleSidebar()" style="position:fixed; top:50%; width:20px; height:40px; left:280px; display:flex; align-items:center; justify-content:center; cursor:pointer;">&#9664;</div>
+
   <div id="sidebar">
-    <!-- 1. Categories (toujours visible) -->
     <div class="sb-section">
       <div class="sb-title">Categories</div>
-      <div class="layer-row" onclick="toggleLayer('failles')"><div class="layer-left"><div class="layer-dot" style="background:#ef4444;box-shadow:0 0 5px #ef4444"></div><div><div class="layer-name">Failles &amp; Exploits</div><div class="layer-count" id="c-failles">0 art</div></div></div><div class="toggle on" id="tgl-failles"></div></div>
-      <div class="layer-row" onclick="toggleLayer('infra')"><div class="layer-left"><div class="layer-dot" style="background:#3b82f6;box-shadow:0 0 5px #3b82f6"></div><div><div class="layer-name">Infrastructures</div><div class="layer-count" id="c-infra">0 art</div></div></div><div class="toggle on" id="tgl-infra"></div></div>
-      <div class="layer-row" onclick="toggleLayer('editeurs')"><div class="layer-left"><div class="layer-dot" style="background:#f59e0b;box-shadow:0 0 5px #f59e0b"></div><div><div class="layer-name">Editeurs critiques</div><div class="layer-count" id="c-editeurs">0 art</div></div></div><div class="toggle on" id="tgl-editeurs"></div></div>
-      <div class="layer-row" onclick="toggleLayer('menaces')"><div class="layer-left"><div class="layer-dot" style="background:#a855f7;box-shadow:0 0 5px #a855f7"></div><div><div class="layer-name">Groupes &amp; APT</div><div class="layer-count" id="c-menaces">0 art</div></div></div><div class="toggle on" id="tgl-menaces"></div></div>
+      <div class="layer-row" onclick="toggleLayer('failles')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:5px;">
+        <div style="display:flex; align-items:center;">
+            <div class="layer-dot" style="width:8px; height:8px; border-radius:50%; background:#ff003c; margin-right:8px; box-shadow:0 0 5px #ff003c;"></div>
+            <div><div class="layer-name">Failles & Exploits</div><div class="layer-count" id="c-failles">0 art</div></div>
+        </div>
+        <div class="toggle on" id="tgl-failles" style="width:25px; height:12px; background:var(--blue-neon); border-radius:6px; position:relative;"><div style="width:10px; height:10px; background:#fff; border-radius:50%; position:absolute; top:1px; right:1px;"></div></div>
+      </div>
+      <div class="layer-row" onclick="toggleLayer('infra')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:5px;">
+        <div style="display:flex; align-items:center;">
+            <div class="layer-dot" style="width:8px; height:8px; border-radius:50%; background:#1e6fff; margin-right:8px; box-shadow:0 0 5px #1e6fff;"></div>
+            <div><div class="layer-name">Infrastructures</div><div class="layer-count" id="c-infra">0 art</div></div>
+        </div>
+        <div class="toggle on" id="tgl-infra" style="width:25px; height:12px; background:var(--blue-neon); border-radius:6px; position:relative;"><div style="width:10px; height:10px; background:#fff; border-radius:50%; position:absolute; top:1px; right:1px;"></div></div>
+      </div>
+      <div class="layer-row" onclick="toggleLayer('editeurs')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:5px;">
+        <div style="display:flex; align-items:center;">
+            <div class="layer-dot" style="width:8px; height:8px; border-radius:50%; background:#ff9f00; margin-right:8px; box-shadow:0 0 5px #ff9f00;"></div>
+            <div><div class="layer-name">Editeurs critiques</div><div class="layer-count" id="c-editeurs">0 art</div></div>
+        </div>
+        <div class="toggle on" id="tgl-editeurs" style="width:25px; height:12px; background:var(--blue-neon); border-radius:6px; position:relative;"><div style="width:10px; height:10px; background:#fff; border-radius:50%; position:absolute; top:1px; right:1px;"></div></div>
+      </div>
+      <div class="layer-row" onclick="toggleLayer('menaces')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:5px;">
+        <div style="display:flex; align-items:center;">
+            <div class="layer-dot" style="width:8px; height:8px; border-radius:50%; background:#a855f7; margin-right:8px; box-shadow:0 0 5px #a855f7;"></div>
+            <div><div class="layer-name">Groupes & APT</div><div class="layer-count" id="c-menaces">0 art</div></div>
+        </div>
+        <div class="toggle on" id="tgl-menaces" style="width:25px; height:12px; background:var(--blue-neon); border-radius:6px; position:relative;"><div style="width:10px; height:10px; background:#fff; border-radius:50%; position:absolute; top:1px; right:1px;"></div></div>
+      </div>
     </div>
-    <!-- 2. Pays (remonte juste apres categories, toujours visible) -->
-    <div class="sb-section">
-      <div class="sb-title">Pays les plus touches</div>
-      <div id="sb-countries"></div>
-    </div>
-    <!-- 3. Sources (scrollable, en bas) -->
-    <div class="sb-section" style="flex:1;overflow-y:auto">
-      <div class="sb-title">45 Sources actives</div>
-      <div style="margin-bottom:5px"><div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">API REST</div><div class="src-item">NewsAPI</div></div>
-      <div style="margin-bottom:5px"><div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">Cyber generaliste</div><div class="src-item">The Hacker News</div><div class="src-item">BleepingComputer</div><div class="src-item">CISA Alerts</div><div class="src-item">Krebs on Security</div><div class="src-item">Dark Reading</div><div class="src-item">SecurityWeek</div><div class="src-item">Cyber Scoop</div><div class="src-item">Threatpost</div><div class="src-item">Schneier on Security</div><div class="src-item">The Record</div><div class="src-item">Infosecurity Magazine</div><div class="src-item">Helpnet Security</div><div class="src-item">Graham Cluley</div><div class="src-item">Zataz</div><div class="src-item">ANSSI</div><div class="src-item">CERT-EU</div><div class="src-item">French Breaches</div></div>
-      <div style="margin-bottom:5px"><div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:#f59e0b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">Cyber specialise</div><div class="src-item">Malwarebytes Labs</div><div class="src-item">Naked Security</div><div class="src-item">We Live Security</div><div class="src-item">Trend Micro</div><div class="src-item">Recorded Future Blog</div><div class="src-item">Cybereason</div></div>
-      <div style="margin-bottom:5px"><div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:#22c55e;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">OSINT</div><div class="src-item">OSINT Curious</div><div class="src-item">Bellingcat</div><div class="src-item">Intel471</div><div class="src-item">Shodan Blog</div><div class="src-item">Maltego Blog</div><div class="src-item">NixIntel</div><div class="src-item">Sector035</div></div>
-      <div style="margin-bottom:5px"><div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:#ef4444;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">Threat Intel</div><div class="src-item">SANS ISC</div><div class="src-item">Mandiant Blog</div><div class="src-item">CrowdStrike Blog</div><div class="src-item">Securelist</div><div class="src-item">Proofpoint</div><div class="src-item">CIRCL</div><div class="src-item">Abuse.ch</div></div>
-      <div><div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;color:#a855f7;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">Investigation</div><div class="src-item">Citizen Lab</div><div class="src-item">The Intercept</div><div class="src-item">OCCRP</div><div class="src-item">GreyNoise Blog</div><div class="src-item">Censys Blog</div><div class="src-item">VulnCheck</div><div class="src-item">AttackerKB</div></div>
+    <div class="sb-section" style="flex:1; overflow-y:auto;">
+      <div class="sb-title">Pays impactés</div>
+      <div id="sb-countries" style="font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:var(--muted);"></div>
     </div>
   </div>
+
   <div id="map"></div>
+
   <div id="right-panel">
-    <div class="rp-section"><div class="rp-title"><span class="live-dot"></span>Niveau d'alerte cyber</div><div class="defcon-row" id="defcon-row"></div><div class="defcon-lbl" id="defcon-lbl"></div></div>
-    <div class="rp-section"><div class="rp-title">Statistiques live</div><div class="stats-grid"><div class="stat-card"><div class="stat-n" id="n-articles">897</div><div class="stat-l">Articles</div></div><div class="stat-card"><div class="stat-n" id="n-sources">0</div><div class="stat-l">Sources</div></div><div class="stat-card"><div class="stat-n">13</div><div class="stat-l">CVE detectes</div></div><div class="stat-card"><div class="stat-n" id="n-crit">--</div><div class="stat-l">Alertes crit.</div></div></div></div>
-    <div class="rp-section"><div class="rp-title"><span class="live-dot"></span>Actualites en direct</div><div class="ticker-wrap"><div class="ticker" id="ticker"></div></div></div>
-    <div class="rp-section"><div class="rp-title">Top menaces</div><div id="threats-list"></div></div>
-    <div class="rp-section"><div class="rp-title">Instabilite par pays</div><div id="countries-rp"></div></div>
     <div class="rp-section">
-      <div class="rp-title">Chaines cyber -- YouTube</div>
-      <div class="yt-tabs" id="yt-tabs"></div>
-      <iframe id="yt-frame" width="100%" style="height:200px;border-radius:6px;display:block" src="https://www.youtube.com/embed/wrYXYelJXi4" frameborder="0" allowfullscreen></iframe>
+        <div class="rp-title">Alerte de sécurité globale</div>
+        <div class="defcon-row" id="defcon-row" style="display:flex; justify-content:center; gap:5px; margin-top:5px;"></div>
+        <div class="defcon-lbl" id="defcon-lbl" style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.6rem; margin-top:3px;"></div>
     </div>
     <div class="rp-section">
-      <div class="rp-title">Ressources & references</div>
-      <a class="res-link" href="https://attack.mitre.org/" target="_blank">MITRE ATT&CK Framework</a>
-      <a class="res-link" href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank">CISA KEV Catalog</a>
-      <a class="res-link" href="https://nvd.nist.gov/" target="_blank">NVD -- National Vulnerability Database</a>
-      <a class="res-link" href="https://cvss-calculator.netlify.app/" target="_blank">Calculateur CVSS v3.1</a>
-      <a class="res-link" href="https://www.virustotal.com/" target="_blank">VirusTotal</a>
-      <a class="res-link" href="https://otx.alienvault.com/" target="_blank">AlienVault OTX</a>
+        <div class="rp-title">Statistiques</div>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-n" id="n-articles">0</div><div class="stat-l">Articles</div></div>
+            <div class="stat-card"><div class="stat-n" id="n-sources">0</div><div class="stat-l">Sources</div></div>
+            <div class="stat-card"><div class="stat-n">13</div><div class="stat-l">CVE Détectées</div></div>
+            <div class="stat-card"><div class="stat-n" id="n-crit" style="color:var(--red-neon); text-shadow: 0 0 5px var(--red-neon);">0</div><div class="stat-l">Critiques</div></div>
+        </div>
+    </div>
+    <div class="rp-section">
+        <div class="rp-title">Top Menaces (Mots-clés)</div>
+        <div id="threats-list"></div>
+    </div>
+    <div class="rp-section" style="flex:1; overflow-y:auto;">
+        <div class="rp-title">Ressources</div>
+        <a href="https://attack.mitre.org/" target="_blank" style="display:block; color:var(--cyan-neon); font-family:'JetBrains Mono',monospace; font-size:0.65rem; text-decoration:none; margin-bottom:4px;">MITRE ATT&CK Framework</a>
+        <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" style="display:block; color:var(--cyan-neon); font-family:'JetBrains Mono',monospace; font-size:0.65rem; text-decoration:none;">CISA KEV Catalog</a>
     </div>
   </div>
-  <div id="timeline">
-    <span style="font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted)">Periode</span>
+
+  <div id="timeline" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:5px 10px; display:flex; gap:5px; align-items:center;">
+    <span style="font-family:'JetBrains Mono',monospace; font-size:0.6rem; color:var(--muted)">Période:</span>
     <button class="tl-btn" onclick="setRange(this)">24h</button>
     <button class="tl-btn" onclick="setRange(this)">7j</button>
     <button class="tl-btn" onclick="setRange(this)">30j</button>
     <button class="tl-btn active" onclick="setRange(this)">Tout</button>
   </div>
-  <div id="legend">
-    <div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.12em;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Intensite</div>
-    <div class="leg-row"><div class="leg-dot" style="width:12px;height:12px;background:#ef4444"></div>Critique</div>
-    <div class="leg-row"><div class="leg-dot" style="width:10px;height:10px;background:#f97316"></div>Eleve</div>
-    <div class="leg-row"><div class="leg-dot" style="width:8px;height:8px;background:#f59e0b"></div>Moyen</div>
-    <div class="leg-row"><div class="leg-dot" style="width:6px;height:6px;background:#3b82f6"></div>Faible</div>
-    <div style="border-top:1px solid var(--border);margin-top:5px;padding-top:5px">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:.58rem;letter-spacing:.12em;color:var(--muted);margin-bottom:3px;text-transform:uppercase">Confiance</div>
-      <div class="leg-row"><div class="leg-dot" style="width:8px;height:8px;background:#22c55e;opacity:1.0"></div>Forte</div>
-      <div class="leg-row"><div class="leg-dot" style="width:8px;height:8px;background:#f59e0b;opacity:0.65"></div>Moyenne</div>
-      <div class="leg-row"><div class="leg-dot" style="width:8px;height:8px;background:#7a9cc8;opacity:0.35"></div>Faible</div>
-    </div>
-  </div>
+
   <script>
     const EVENTS = [
-      { cat:'failles', lat:38.9, lon:-77.0, country:'USA', title:'placeholder', kw:['rce'], severity:'critical', source:'CISA Alerts', org_cible:'', geo_mode:'target', url:'', conf_score:85, conf_label:'forte' }
+      { cat:'failles', lat:48.8, lon:2.3, country:'France', title:'Simulation d\'attaque RCE', kw:['rce', 'exploit'], severity:'critical', source:'ANSSI', org_cible:'Gouvernement', geo_mode:'target', url:'', conf_score:95, conf_label:'forte' },
+      { cat:'menaces', lat:39.9, lon:116.4, country:'Chine', title:'Activité APT suspectée', kw:['apt', 'volt typhoon'], severity:'high', source:'TheRecord', org_cible:'', geo_mode:'target', url:'', conf_score:75, conf_label:'moyenne' },
+      { cat:'infra', lat:37.1, lon:-95.7, country:'USA', title:'Panne massive suite DDoS', kw:['ddos'], severity:'medium', source:'BleepingComputer', org_cible:'Telecom Corp', geo_mode:'source', url:'', conf_score:50, conf_label:'faible' }
     ];
-    const CFG={failles:{color:'#ef4444',label:'Failles & Exploits'},infra:{color:'#3b82f6',label:'Infrastructures'},editeurs:{color:'#f59e0b',label:'Editeurs critiques'},menaces:{color:'#a855f7',label:'Groupes & APT'}};
-    const SZ={critical:10,high:7,medium:5,low:3};
+    
+    // Ton code JavaScript original (légèrement épuré pour la démo)
+    const CFG={failles:{color:'#ff003c'},infra:{color:'#1e6fff'},editeurs:{color:'#ff9f00'},menaces:{color:'#a855f7'}};
+    const SZ={critical:12,high:9,medium:7,low:5};
     const layerState={failles:true,infra:true,editeurs:true,menaces:true};
     const layerGroups={};
-    const map=L.map('map',{center:[25,15],zoom:2,zoomControl:false,attributionControl:false,minZoom:2});
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
-    L.control.zoom({position:'bottomleft'}).addTo(map);
-    Object.keys(CFG).forEach(function(k){layerGroups[k]=L.layerGroup().addTo(map)});
-    function confColor(l){return l==='forte'?'#22c55e':l==='moyenne'?'#f59e0b':'#ef4444'}
-    function confOpacity(l){return l==='forte'?1.0:l==='moyenne'?0.65:0.35}
-    var flags={'USA':'US','UK':'GB','Russie':'RU','Chine':'CN','France':'FR','Allemagne':'DE','Ukraine':'UA','Japon':'JP','Iran':'IR','Inde':'IN','Canada':'CA','Australie':'AU','Bresil':'BR','Turquie':'TR','Israel':'IL','Espagne':'ES','Pologne':'PL','Norvege':'NO','Singapour':'SG','UAE':'AE','Malaisie':'MY','Mexique':'MX','Coree du Sud':'KR','Autriche':'AT','Finlande':'FI','Irlande':'IE','Hong Kong':'HK','Egypte':'EG','Slovenie':'SI','Slovaquie':'SK','Belgique':'BE','Suisse':'CH','Suede':'SE','Danemark':'DK','Pays-Bas':'NL','Italie':'IT','Europe':'EU'};
-    var cColors=['#ef4444','#f97316','#f59e0b','#22c55e','#3b82f6','#a855f7','#06b6d4','#ec4899'];
-    var dc={1:'#ef4444',2:'#f97316',3:'#f59e0b',4:'#3b82f6',5:'#22c55e'};
-    var dlbl={1:'DEFCON 1 -- Guerre cyber imminente',2:'DEFCON 2 -- Attaque critique',3:'DEFCON 3 -- Menace elevee',4:'DEFCON 4 -- Activite suspecte',5:'DEFCON 5 -- Normal'};
-    var sbOpen=true;
-    function toggleSidebar(){sbOpen=!sbOpen;document.getElementById('sidebar').classList.toggle('collapsed');document.getElementById('sb-toggle').classList.toggle('collapsed');document.getElementById('map').classList.toggle('sb-collapsed');document.getElementById('sb-toggle').innerHTML=sbOpen?'&#9664;':'&#9654;';setTimeout(function(){map.invalidateSize()},350)}
-    var _mkIdx=0;
-    function mkMarker(ev){var c=CFG[ev.cat].color,s=SZ[ev.severity]||5,op=confOpacity(ev.conf_label);var isCrit=ev.severity==='critical';var delay=((_mkIdx++)*0.37%2.5).toFixed(2);var ringHtml='<div class="mk-ring" style="--mk-color:'+c+';--mk-delay:'+delay+'s"></div>';if(isCrit)ringHtml+='<div class="mk-ring2" style="--mk-color:'+c+'"></div>';var icon=L.divIcon({html:'<div class="mk-wrap" style="width:'+s*2.5+'px;height:'+s*2.5+'px;--mk-op:'+op+';--mk-delay:'+delay+'s;--mk-color:'+c+'">'+ringHtml+'<div class="mk-dot" style="width:'+s+'px;height:'+s+'px;background:'+c+';box-shadow:0 0 '+s+'px '+c+',0 0 '+Math.round(s*1.5)+'px '+c+'44;border:1px solid '+c+'88;"></div></div>',className:'',iconSize:[s*2.5,s*2.5],iconAnchor:[s*1.25,s*1.25]});var kws=ev.kw.map(function(k){return '<span>'+k+'</span>'}).join('');var dateStr=ev.ts?new Date(ev.ts).toLocaleDateString('fr-FR'):'--';var titleHtml=ev.url?'<a href="'+ev.url+'" target="_blank" style="color:var(--text);text-decoration:underline;text-underline-offset:3px;">'+ev.title+'</a>':ev.title;var menace=ev.kw&&ev.kw.length>0?ev.kw[0]:'';var menaceLine=menace?(ev.org_cible?'<div class="pp-meta" style="color:#f59e0b;margin-top:3px">Menace : '+menace+' -- '+ev.org_cible+'</div>':'<div class="pp-meta" style="color:#f59e0b;margin-top:3px">Menace : '+menace+'</div>'):'';var score=ev.conf_score!=null?ev.conf_score:null;var label=ev.conf_label||null;var geoTag=ev.geo_mode==='source'?'<span style="color:#7a9cc8;font-size:.55rem"> (source)</span>':'';var confLine=score!=null?'<div class="pp-conf"><span class="pp-conf-label" style="color:'+confColor(label)+'">'+label+'</span><div class="pp-conf-bar-wrap"><div class="pp-conf-bar" style="width:'+score+'%;background:'+confColor(label)+'"></div></div><span class="pp-conf-score">'+score+'/100'+geoTag+'</span></div>':'';return L.marker([ev.lat,ev.lon],{icon:icon}).bindPopup(L.popup({className:'cyber-popup',maxWidth:280}).setContent('<div style="padding:4px"><div class="pp-cat" style="color:'+c+'">'+CFG[ev.cat].label+'</div><div class="pp-title">'+titleHtml+'</div><div class="pp-meta">Pays attaque : '+ev.country+' -- Source : '+ev.source+' -- '+dateStr+'</div>'+menaceLine+confLine+'<div class="pp-kw">'+kws+'</div></div>'))}
-    function renderEvents(evts){_mkIdx=0;Object.keys(layerGroups).forEach(function(k){layerGroups[k].clearLayers()});evts.forEach(function(ev){var m=mkMarker(ev);m._ev=ev;layerGroups[ev.cat].addLayer(m)});var nC=new Set(evts.map(function(e){return e.country})).size;var nSrc=new Set(evts.map(function(e){return e.source})).size;var nCritEvts=evts.filter(function(e){return e.severity==='critical'}).length;document.getElementById('n-events').textContent=evts.length;document.getElementById('n-countries').textContent=nC;var elArt=document.getElementById('n-articles');if(elArt)elArt.textContent=evts.length;var elSrc=document.getElementById('n-sources');if(elSrc)elSrc.textContent=nSrc;var elCrit=document.getElementById('n-crit');if(elCrit)elCrit.textContent=nCritEvts;var cc={};evts.forEach(function(e){cc[e.country]=(cc[e.country]||0)+1});var topC=Object.entries(cc).sort(function(a,b){return b[1]-a[1]}).slice(0,8);var maxC=topC[0]?topC[0][1]:1;document.getElementById('sb-countries').innerHTML=topC.map(function(p){var c=p[0],n=p[1];var code=flags[c]||'--';return '<div class="country-row"><span class="country-name"><span class="country-code">'+code+'</span>'+c+'</span><span class="country-n">'+n+'</span></div>'}).join('');var dl=nCritEvts>=15?1:nCritEvts>=10?2:nCritEvts>=6?3:nCritEvts>=3?4:5;var dr=document.getElementById('defcon-row');dr.innerHTML='';for(var i=1;i<=5;i++){var b=document.createElement('div');b.className='defcon-btn'+(i===dl?' active':'');b.textContent=i;if(i===dl){b.style.background=dc[i]+'22';b.style.borderColor=dc[i];b.style.color=dc[i]}dr.appendChild(b)}document.getElementById('defcon-lbl').textContent=dlbl[dl];document.getElementById('defcon-lbl').style.color=dc[dl];var tc={};evts.forEach(function(e){e.kw.forEach(function(k){tc[k]=(tc[k]||0)+1})});var topT=Object.entries(tc).sort(function(a,b){return b[1]-a[1]}).slice(0,8);var maxT=topT[0]?topT[0][1]:1;document.getElementById('threats-list').innerHTML=topT.map(function(p,i){var k=p[0],n=p[1];return '<div class="threat-row"><div class="threat-top"><span class="threat-name">'+k+'</span><span class="threat-val">'+n+'</span></div><div class="threat-bar"><div class="threat-fill" style="width:'+Math.round(n/maxT*100)+'%;background:'+cColors[i%cColors.length]+'"></div></div></div>'}).join('');document.getElementById('countries-rp').innerHTML=topC.map(function(p,i){var c=p[0],n=p[1];var code=flags[c]||'--';return '<div class="pscore-row"><span class="pflag">'+code+'</span><span class="pname">'+c+'</span><span class="pn">'+n+'</span><div class="pbar"><div class="pbar-fill" style="width:'+Math.round(n/maxC*100)+'%;background:'+cColors[i%cColors.length]+'"></div></div></div>'}).join('');document.getElementById('n-layers').textContent=Object.values(layerState).filter(Boolean).length}
-    function toggleLayer(cat){layerState[cat]=!layerState[cat];var tgl=document.getElementById('tgl-'+cat);if(layerState[cat]){layerGroups[cat].addTo(map);tgl.classList.add('on');tgl.classList.remove('off')}else{map.removeLayer(layerGroups[cat]);tgl.classList.remove('on');tgl.classList.add('off')}document.getElementById('n-layers').textContent=Object.values(layerState).filter(Boolean).length}
-    function setRange(btn){document.querySelectorAll('.tl-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');var label=btn.textContent.trim();var now=new Date();var cutoff=null;if(label==='24h')cutoff=new Date(now-24*3600*1000);else if(label==='7j')cutoff=new Date(now-7*24*3600*1000);else if(label==='30j')cutoff=new Date(now-30*24*3600*1000);var filtered=cutoff?EVENTS.filter(function(e){return e.ts&&new Date(e.ts)>=cutoff}):EVENTS;renderEvents(filtered)}
-    setRange(document.querySelector('.tl-btn.active'));
-    var tk=document.getElementById('ticker');[].concat(EVENTS,EVENTS).forEach(function(e){var el=document.createElement('span');el.className='t-item';el.innerHTML='<span class="t-dot" style="background:'+CFG[e.cat].color+'"></span>'+e.title+' <span style="color:var(--muted)">['+e.country+']</span>';tk.appendChild(el)});
-    var YT=[{label:'ANSSI',url:'https://www.youtube.com/embed/wHCu670g0wo'},{label:'Cybernews FR',url:'https://www.youtube.com/embed/koRzY8hU-L0'},{label:'Bellingcat',url:'https://www.youtube.com/embed/DyQyHt4LNKM'}];
-    var ytTabs=document.getElementById('yt-tabs'),ytFrame=document.getElementById('yt-frame');
-    YT.forEach(function(ch,i){var b=document.createElement('button');b.className='yt-tab'+(i===0?' active':'');b.textContent=ch.label;b.onclick=function(){ytFrame.src=ch.url;ytTabs.querySelectorAll('.yt-tab').forEach(function(x){x.classList.remove('active')});b.classList.add('active')};ytTabs.appendChild(b)});
+    const map=L.map('map',{center:[20,0],zoom:2,zoomControl:false,attributionControl:false});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+    
+    Object.keys(CFG).forEach(k=>{layerGroups[k]=L.layerGroup().addTo(map)});
+
+    function toggleSidebar(){
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('map').classList.toggle('sb-collapsed');
+        const btn = document.getElementById('sb-toggle');
+        btn.innerHTML = btn.innerHTML === '◀' ? '▶' : '◀';
+        btn.style.left = btn.innerHTML === '◀' ? '280px' : '0px';
+    }
+
+    function toggleLayer(cat){
+        layerState[cat]=!layerState[cat];
+        const tgl=document.getElementById('tgl-'+cat);
+        if(layerState[cat]){layerGroups[cat].addTo(map);tgl.style.background='var(--blue-neon)';}
+        else{map.removeLayer(layerGroups[cat]);tgl.style.background='#444';}
+    }
+
+    function renderMarkers(evts){
+        Object.keys(layerGroups).forEach(k=>layerGroups[k].clearLayers());
+        evts.forEach((ev,idx)=>{
+            if(!CFG[ev.cat]) return;
+            const c=CFG[ev.cat].color, s=SZ[ev.severity]||7;
+            const delay=(idx*0.2).toFixed(2);
+            
+            const icon=L.divIcon({
+                html:`<div class="mk-wrap" style="width:${s*2}px;height:${s*2}px;--mk-color:${c}">
+                        <div class="mk-ring"></div>
+                        <div class="mk-dot" style="width:${s}px;height:${s}px;background:${c};"></div>
+                      </div>`,
+                className:'', iconSize:[s*2,s*2]
+            });
+            
+            L.marker([ev.lat,ev.lon],{icon:icon}).addTo(layerGroups[ev.cat])
+             .bindPopup(`<div class="cyber-popup"><div class="pp-title">${ev.title}</div><div class="pp-meta">${ev.country} | ${ev.source}</div></div>`);
+        });
+        
+        // Mise à jour stats basique pour la démo
+        document.getElementById('n-events').innerText = evts.length;
+        document.getElementById('n-articles').innerText = evts.length;
+        document.getElementById('n-sources').innerText = new Set(evts.map(e=>e.source)).size;
+        document.getElementById('n-crit').innerText = evts.filter(e=>e.severity==='critical').length;
+    }
+
+    renderMarkers(EVENTS);
   </script>
 </body>
 </html>
