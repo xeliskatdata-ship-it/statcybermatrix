@@ -1,4 +1,4 @@
-# 2_kpi2_Mots_cles.py -- Version Treemap & Deep Dive Sources
+# 2_kpi2_Mots_cles.py -- Version Treemap avec Liens Hypertextes Dynamiques
 
 import os
 import sys
@@ -9,8 +9,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 from datetime import datetime
 
+# Import des fonctions de données
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from db_connect import get_mart_k2, force_refresh
+from db_connect import get_mart_k2, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="KPI 2 - Threat Keywords", layout="wide")
 
@@ -24,6 +25,9 @@ st.markdown("""
 .metric-container { background: rgba(15,20,34,0.6); border: 1px solid rgba(168,85,247,0.2); border-radius: 8px; padding: 20px; text-align: center; backdrop-filter: blur(10px); }
 .metric-label { font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; }
 .metric-value { font-family: 'Roboto Mono'; font-size: 2.2rem; font-weight: 700; color: #e2e8f0; }
+/* Style pour les liens d'articles */
+.article-link { color: #a855f7; text-decoration: none; font-weight: 500; }
+.article-link:hover { text-decoration: underline; color: #d8b4fe; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -66,14 +70,10 @@ components.html("""
 # ── CHARGEMENT ET CALCULS ────────────────────────────────────────────────────
 try:
     df_raw = get_mart_k2()
-    # On sépare 3j et 15j pour calculer l'accélération
     v3 = df_raw[df_raw['period_days'] == 3].copy()
     v15 = df_raw[df_raw['period_days'] == 15][['keyword', 'occurrences']].rename(columns={'occurrences':'occ_15j'})
-    
     drift_df = pd.merge(v3, v15, on='keyword', how='left').fillna(0)
-    # Formule d'accélération (Volume récent / Moyenne lissée ancienne)
     drift_df['acceleration'] = (drift_df['occurrences'] + 1) / ((drift_df['occ_15j'] / 5) + 1)
-    # Simuler des catégories si elles n'existent pas dans ta base pour le Treemap
     if 'category' not in drift_df.columns:
         drift_df['category'] = 'Threats' 
 except Exception as e:
@@ -95,75 +95,66 @@ with col4:
     if st.button("⟳ Refresh Data", use_container_width=True):
         force_refresh(); st.rerun()
 
-# ── FILTRES ET TREEMAP ────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">Analyse Hiérarchique : Part de Voix & Accélération</div>', unsafe_allow_html=True)
+# ── TREEMAP DYNAMIQUE ─────────────────────────────────────────────────────────
+st.markdown('<div class="section-title">Analyse Hiérarchique : Volume & Accélération</div>', unsafe_allow_html=True)
 
-f_col1, f_col2 = st.columns([1, 2])
-with f_col1:
-    min_accel = st.slider("Seuil d'accélération (Emergence)", 0.5, 3.0, 1.0, step=0.1)
-
+min_accel = st.slider("Filtrer par indice d'émergence (Accélération)", 0.5, 4.0, 1.0, step=0.1)
 df_filtered = drift_df[drift_df['acceleration'] >= min_accel]
 
 fig_tree = px.treemap(
     df_filtered,
-    path=[px.Constant("Toutes les menaces"), 'category', 'keyword'],
+    path=[px.Constant("Global Overview"), 'category', 'keyword'],
     values='occurrences',
     color='acceleration',
     color_continuous_scale='Purples',
-    range_color=[0.5, 2.5],
+    range_color=[0.5, 3.0],
     hover_data={'acceleration': ':.2f', 'occurrences': True, 'source_count': True}
 )
-
-fig_tree.update_layout(
-    margin=dict(t=10, b=10, l=10, r=10),
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="Roboto Mono", color="#e2e8f0")
-)
+fig_tree.update_layout(margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 st.plotly_chart(fig_tree, use_container_width=True)
 
-# ── GRAPHIQUE BARRES : FIABILITÉ DU SIGNAL ────────────────────────────────────
-st.markdown('<div class="section-title">Fiabilité du Signal (Sources Uniques & Détails)</div>', unsafe_allow_html=True)
+# ── GRAPHIQUE BARRES : FIABILITÉ ──────────────────────────────────────────────
+st.markdown('<div class="section-title">Fiabilité du Signal (Sources Uniques)</div>', unsafe_allow_html=True)
 
-# On prépare une chaîne de texte pour le hover qui liste les sources (si ton DF les contient)
-# Si ta colonne s'appelle 'sources_list', on l'utilise, sinon on affiche le compte.
 df_snr = df_filtered.nlargest(15, 'occurrences').sort_values('source_count')
-
 fig_snr = go.Figure(go.Bar(
-    y=df_snr['keyword'], 
-    x=df_snr['source_count'],
+    y=df_snr['keyword'], x=df_snr['source_count'],
     orientation='h',
-    marker=dict(
-        color=df_snr['source_count'],
-        colorscale='Purples',
-        line=dict(color='rgba(168,85,247,0.6)', width=1)
-    ),
-    # C'est ici qu'on définit ce qui s'affiche au survol
-    hovertemplate="<b>Keyword: %{y}</b><br>" +
-                  "Nombre de sources: %{x}<br>" +
-                  "<i>Survoler pour voir l'intensité du signal</i><extra></extra>"
+    marker=dict(color=df_snr['source_count'], colorscale='Purples', line=dict(color='rgba(168,85,247,0.6)', width=1)),
+    hovertemplate="<b>Keyword: %{y}</b><br>Sources uniques: %{x}<extra></extra>"
 ))
-
-fig_snr.update_layout(
-    paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(15,20,34,0.4)",
-    height=500,
-    xaxis=dict(title="Nombre de sources distinctes", gridcolor="rgba(255,255,255,0.05)"),
-    yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
-    font=dict(family="Roboto Mono", color="#94a3b8")
-)
+fig_snr.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,20,34,0.4)", height=400, font=dict(family="Roboto Mono", color="#94a3b8"))
 st.plotly_chart(fig_snr, use_container_width=True)
 
-# ── TABLEAU DE DÉTAILS POUR LES CONSULTANTS ───────────────────────────────────
-st.markdown('<div class="section-title">🔍 Deep Dive : Explorer les articles</div>', unsafe_allow_html=True)
+# ── DEEP DIVE : EXPLORER LES ARTICLES (AVEC LIENS) ────────────────────────────
+st.markdown('<div class="section-title"> Deep Dive : Articles Relatés</div>', unsafe_allow_html=True)
 
-selected_kw = st.selectbox("Sélectionner un mot-clé pour voir les sources", ["-- Choisir un mot-clé --"] + list(df_snr['keyword']))
+selected_kw = st.selectbox("Sélectionner un mot-clé pour extraire les sources", ["-- Choisir un mot-clé --"] + sorted(list(df_filtered['keyword'])))
 
 if selected_kw != "-- Choisir un mot-clé --":
-    # Ici, tu peux appeler une fonction qui va chercher les articles réels pour ce mot-clé
-    st.info(f"Affichage des derniers articles liés à : **{selected_kw}**")
-    # Exemple de structure de lien pour les consultants :
-    st.markdown(f"""
-    - [Source 1] Article sur {selected_kw} - *12/04/2026*
-    - [Source 2] Analyse technique de {selected_kw} - *13/04/2026*
-    """)
+    try:
+        # On récupère les articles bruts pour filtrer sur le mot-clé
+        all_articles = get_stg_articles(limit=5000)
+        # Filtre : on cherche le mot-clé dans le titre ou le résumé (insensible à la casse)
+        mask = all_articles['title'].str.contains(selected_kw, case=False, na=False)
+        relevant_articles = all_articles[mask].sort_values('published_date', ascending=False).head(10)
+        
+        if not relevant_articles.empty:
+            st.info(f"Derniers articles identifiés pour le tag : **{selected_kw}**")
+            for _, row in relevant_articles.iterrows():
+                title = row['title']
+                url = row['url']
+                source = row['source']
+                date = str(row['published_date'])[:10]
+                
+                # Affichage propre avec lien hypertexte
+                st.markdown(f"""
+                <div style="background:rgba(15,20,34,0.6); border:1px solid rgba(168,85,247,0.2); border-radius:6px; padding:10px; margin-bottom:8px;">
+                    <a href="{url}" target="_blank" class="article-link">🔗 {title}</a><br>
+                    <span style="font-size:0.75rem; color:#64748b;">Source : {source} | Publié le : {date}</span>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.warning(f"Aucun article récent trouvé contenant explicitement le mot-clé '{selected_kw}' dans le titre.")
+    except Exception as e:
+        st.error(f"Erreur lors de l'extraction des articles : {e}")
