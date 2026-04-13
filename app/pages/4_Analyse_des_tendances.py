@@ -57,6 +57,37 @@ html,body,[class*="css"]{font-family:'Roboto',sans-serif; color: #ffffff !import
     text-decoration: underline; font-size: 0.9rem;
     display: block; margin-bottom: 8px;
 }
+
+/* DESIGN TABLEAU AMELIORE */
+.custom-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 25px;
+    font-family: 'Roboto Mono', monospace;
+    background-color: rgba(15, 20, 34, 0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(50, 205, 50, 0.2);
+}
+.custom-table th {
+    background-color: rgba(50, 205, 50, 0.1);
+    color: #32CD32;
+    text-align: left;
+    padding: 12px 15px;
+    border-bottom: 2px solid rgba(50, 205, 50, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.9rem;
+}
+.custom-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    font-size: 0.85rem;
+}
+.status-crit { color: #ff4b4b; font-weight: bold; }
+.status-warn { color: #ffa500; }
+.status-ok { color: #32CD32; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -139,7 +170,7 @@ if not df_mart.empty and target:
         fig_radar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,20,34,0.6)', font=dict(color='#ffffff'))
         st.plotly_chart(fig_radar, use_container_width=True)
 
-        # ── BLOC ANALYSE ─────────────────────────────────────────────────────
+        # ── BLOC ANALYSE & TABLEAU DESIGN ────────────────────────────────────
         status = "CRITIQUE" if top_emergence['z_score'] > 2 else "STABLE"
         color_status = "#ff4b4b" if top_emergence['z_score'] > 2 else "#32CD32"
         
@@ -150,6 +181,30 @@ if not df_mart.empty and target:
                 <b>DETAIL DE L'ALERTE :</b> Le <b>{date_pic_str}</b>, un volume de <b>{vol_pic} mentions</b> a ete identifie. 
                 Cela représente un bond de <b>{bond_percent:.1f}%</b> par rapport a l'activite habituelle de la categorie <b>{target}</b>.
             </div>
+            
+            <br>
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Valeur Z-Score</th>
+                        <th>Signification pour le Consultant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>0</b></td>
+                        <td><span class="status-ok">Activité normale</span> (calme plat)</td>
+                    </tr>
+                    <tr>
+                        <td><b>1 à 2</b></td>
+                        <td><span class="status-warn">Vigilance</span> : bruit de fond en légère augmentation</td>
+                    </tr>
+                    <tr>
+                        <td><b>> 2</b></td>
+                        <td><span class="status-crit">ANOMALIE</span> : Signal fort d'une attaque critique</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         """, unsafe_allow_html=True)
 
@@ -169,10 +224,4 @@ if not df_mart.empty and target:
         except:
             st.warning("Erreur lors de la récupération des sources détaillées.")
 
-# ── MÉTHODOLOGIE ─────────────────────────────────────────────────────────────
 st.markdown("---")
-st.markdown("### Guide d'interpretation du Z-Score")
-st.table(pd.DataFrame({
-    "Valeur Z-Score": ["0", "1 a 2", "> 2"],
-    "Signification": ["Activite normale", "Vigilance (bruit en hausse)", "ANOMALIE (Signal d'attaque)"]
-}))
