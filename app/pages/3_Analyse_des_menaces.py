@@ -1,5 +1,5 @@
 """
-CyberPulse -- KPI 3
+StatCyberMatrix -- KPI 3
 Analyse de la répartition des menaces
 Design : fond bokeh, animation ECG, cartes animées (style KPI1)
 """
@@ -16,7 +16,7 @@ from datetime import datetime
 
 from db_connect import get_mart_k3, get_stg_articles, force_refresh
 
-st.set_page_config(page_title="CyberPulse - KPI 3 Menaces", layout="wide")
+st.set_page_config(page_title="StatCyberMatrix - KPI 3 Menaces", layout="wide")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sidebar_css import inject_sidebar_css
@@ -518,4 +518,4 @@ with st.expander("Détails des données brutes"):
     st.dataframe(agg_display, use_container_width=True, hide_index=True)
 
     csv = agg_display.to_csv(index=False).encode('utf-8')
-    st.download_button("⬇ Exporter en CSV", csv, "cyberpulse_kpi3.csv", "text/csv")
+    st.download_button("⬇ Exporter en CSV", csv, "StatCyberMatrix_kpi3.csv", "text/csv")

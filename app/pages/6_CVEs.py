@@ -1,5 +1,5 @@
 """
-CyberPulse -- KPI 6
+StatCyberMatrix -- KPI 6
 Most mentioned CVEs + NVD details
 Design : fond bokeh, animation ECG, cartes animees (style KPI1)
 """
@@ -16,7 +16,7 @@ import os
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "src"))
 from db_connect import get_mart_k6, get_stg_articles, force_refresh
 
-st.set_page_config(page_title="CyberPulse - KPI 6 CVE", layout="wide")
+st.set_page_config(page_title="StatCyberMatrix - KPI 6 CVE", layout="wide")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sidebar_css import inject_sidebar_css
@@ -274,7 +274,7 @@ def _fetch_cve_details(cve_id):
     url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve_id}"
     try:
         resp = requests.get(url, timeout=10,
-                            headers={"User-Agent": "CyberPulse-Dashboard/1.0"})
+                            headers={"User-Agent": "StatCyberMatrix-Dashboard/1.0"})
         if resp.status_code != 200:
             return None
         data = resp.json()
@@ -615,5 +615,5 @@ st.markdown("""
 with st.expander("Details des donnees brutes"):
     st.dataframe(agg, use_container_width=True, hide_index=True)
     csv = agg.to_csv(index=False).encode('utf-8')
-    st.download_button("Exporter les CVEs (CSV)", csv, "cyberpulse_kpi6.csv", "text/csv")
+    st.download_button("Exporter les CVEs (CSV)", csv, "StatCyberMatrix_kpi6.csv", "text/csv")
     

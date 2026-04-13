@@ -1,4 +1,4 @@
-# app.py -- CyberPulse Dashboard -- Page d'accueil
+# app.py -- StatCyberMatrix Dashboard -- Page d'accueil
 # Metriques globales + tableau articles + navigation KPI
 
 import base64
@@ -14,12 +14,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from db_connect import get_mart_k1, get_stg_articles, force_refresh
 from utils_lang import t
 
-st.set_page_config(page_title="CyberPulse", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="StatCyberMatrix", layout="wide", initial_sidebar_state="expanded")
 
 # ── Sidebar CSS (module partage) -- badges dynamiques ─────────────────────────
 sys.path.insert(0, os.path.dirname(__file__))
 from sidebar_css import inject_sidebar_css
 inject_sidebar_css()
+
+st.sidebar.image(os.path.join(os.path.dirname(__file__), "static", "statcybermatrix_sidebar.png"))
 
 # ── CSS global + menu Option B ────────────────────────────────────────────────
 st.markdown("""
@@ -203,7 +205,7 @@ components.html("""
 """, height=0)
 
 # ── Logo ──────────────────────────────────────────────────────────────────────
-_logo_path = os.path.join(os.path.dirname(__file__), "static", "logo_cyberpulse.jpg")
+_logo_path = os.path.join(os.path.dirname(__file__), "static", "logo_statcybermatrix.png")
 LOGO_B64 = ""
 if os.path.exists(_logo_path):
     with open(_logo_path, "rb") as f:
@@ -233,7 +235,7 @@ with st.sidebar:
     if LOGO_B64:
         st.markdown(
             f"<div style='padding:12px 0 8px 0;text-align:center'>"
-            f"<img src='data:image/jpeg;base64,{LOGO_B64}' "
+            f"<img src='data:image/png;base64,{LOGO_B64}' "
             f"style='width:100%;max-width:600px;border-radius:10px;margin-bottom:6px'>"
             f"</div>",
             unsafe_allow_html=True,
@@ -276,7 +278,7 @@ logo_tag = (
     f'display:block;margin-left:auto;margin-right:auto">'
     if LOGO_B64
     else '<div style="font-family:Roboto Mono;font-size:2rem;font-weight:700;'
-         'color:#e2e8f0;margin-bottom:20px">CyberPulse</div>'
+         'color:#e2e8f0;margin-bottom:20px">StatCyberMatrix</div>'
 )
 
 st.markdown(f"""

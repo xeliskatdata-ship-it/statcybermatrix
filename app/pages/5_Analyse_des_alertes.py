@@ -1,5 +1,5 @@
 """
-CyberPulse -- KPI 5
+StatCyberMatrix -- KPI 5
 Threat Intelligence Matrix — Alertes par semaine et categorie
 Design : fond bokeh, animation ECG, cartes animees (style KPI1)
 """
@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 
 from db_connect import get_mart_k5, get_stg_articles, force_refresh
 
-st.set_page_config(page_title="CyberPulse - KPI 5 Alertes", layout="wide")
+st.set_page_config(page_title="StatCyberMatrix - KPI 5 Alertes", layout="wide")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sidebar_css import inject_sidebar_css

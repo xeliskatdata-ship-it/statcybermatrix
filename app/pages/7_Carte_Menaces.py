@@ -1,5 +1,5 @@
 """
-CyberPulse -- Threat Map
+StatCyberMatrix -- Threat Map
 Articles geo-located by ATTACKED country (spaCy NER), fallback on source origin.
 Sprint 5 v3 : improved geolocation (4 enhancements) + cache 5min
 """

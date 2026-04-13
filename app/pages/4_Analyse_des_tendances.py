@@ -1,5 +1,5 @@
 """
-CyberPulse -- KPI 4
+StatCyberMatrix -- KPI 4
 Analyse des tendances avec sélecteur temporel dynamique
 Design : fond bokeh, animation ECG, cartes animées (style KPI1)
 """
@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 
 from db_connect import get_mart_k4, get_stg_articles, force_refresh
 
-st.set_page_config(page_title="CyberPulse - KPI 4 Tendances", layout="wide")
+st.set_page_config(page_title="StatCyberMatrix - KPI 4 Tendances", layout="wide")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sidebar_css import inject_sidebar_css
@@ -510,4 +510,4 @@ st.plotly_chart(fig_comp, use_container_width=True)
 with st.expander("Details des donnees brutes"):
     st.dataframe(df_comp, use_container_width=True, hide_index=True)
     csv = df_comp.to_csv(index=False).encode('utf-8')
-    st.download_button("Exporter en CSV", csv, "cyberpulse_kpi4.csv", "text/csv")
+    st.download_button("Exporter en CSV", csv, "StatCyberMatrix_kpi4.csv", "text/csv")
