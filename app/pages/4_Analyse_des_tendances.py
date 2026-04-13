@@ -58,7 +58,7 @@ html,body,[class*="css"]{font-family:'Roboto',sans-serif; color: #ffffff !import
     display: block; margin-bottom: 8px;
 }
 
-/* DESIGN TABLEAU AMELIORE */
+/* DESIGN TABLEAU */
 .custom-table {
     width: 100%;
     border-collapse: collapse;
@@ -138,10 +138,13 @@ with st.sidebar:
     st.markdown("### Analyse de Menaces")
     choix_temps = st.selectbox("Fenetre d'observation", ["7 derniers jours", "14 derniers jours", "30 derniers jours"], index=1)
     nb_jours = int(choix_temps.split()[0])
-    cats_dispo = sorted(df_mart['category'].unique().tolist()) if not df_mart.empty else []
-    target = st.selectbox("Vecteur cible", cats_dispo) if cats_dispo else None
+    
+    # Intégration de l'option "Tout"
+    cats_brutes = sorted(df_mart['category'].unique().tolist()) if not df_mart.empty else []
+    cats_dispo = ["Tout"] + cats_brutes
+    target = st.selectbox("Vecteur cible", cats_dispo)
 
-if not df_mart.empty and target:
+if not df_mart.empty:
     date_limite = df_mart['published_date'].max() - timedelta(days=nb_jours)
     df_filtered = df_mart[df_mart['published_date'] >= date_limite].copy()
 
@@ -150,7 +153,11 @@ if not df_mart.empty and target:
     # ── GRAPHIQUE Z-SCORE ────────────────────────────────────────────────────
     st.markdown(f'<div class="section-title">Indice d\'Accélération (Z-Score) - {target}</div>', unsafe_allow_html=True)
     
-    data_trend = df_filtered[df_filtered['category'] == target].groupby('published_date')['nb_mentions'].sum().reset_index()
+    # Filtrage logique : si "Tout", on groupe par date sans filtrer la catégorie
+    if target == "Tout":
+        data_trend = df_filtered.groupby('published_date')['nb_mentions'].sum().reset_index()
+    else:
+        data_trend = df_filtered[df_filtered['category'] == target].groupby('published_date')['nb_mentions'].sum().reset_index()
 
     if not data_trend.empty:
         mean_val = data_trend['nb_mentions'].mean()
@@ -174,18 +181,18 @@ if not df_mart.empty and target:
         status = "CRITIQUE" if top_emergence['z_score'] > 2 else "STABLE"
         color_status = "#ff4b4b" if top_emergence['z_score'] > 2 else "#32CD32"
         
-        # 1. On affiche le début du bloc
+        target_display = "tous vecteurs confondus" if target == "Tout" else f"la catégorie <b>{target}</b>"
+
         st.markdown(f"""
         <div class="insight-box">
             <b>Etat du signal :</b> <span style="color:{color_status}; font-weight:bold;">{status}</span> (Score Z : {top_emergence['z_score']:.2f})
             <div class="alert-highlight">
                 <b>DETAIL DE L'ALERTE :</b> Le <b>{date_pic_str}</b>, un volume de <b>{vol_pic} mentions</b> a ete identifie. 
-                Cela représente un bond de <b>{bond_percent:.1f}%</b> par rapport a l'activite habituelle de la categorie <b>{target}</b>.
+                Cela représente un bond de <b>{bond_percent:.1f}%</b> par rapport a l'activite habituelle pour {target_display}.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # 2. tableau explicatif
         st.markdown("""
         <table class="custom-table">
             <thead>
@@ -216,12 +223,18 @@ if not df_mart.empty and target:
         try:
             df_articles = get_stg_articles(limit=2000)
             df_articles['published_date'] = pd.to_datetime(df_articles['published_date']).dt.normalize()
-            sources_pic = df_articles[(df_articles['published_date'] == raw_date_pic) & (df_articles['category'] == target)]
+            
+            # Filtrage des sources pour la date du pic
+            if target == "Tout":
+                sources_pic = df_articles[df_articles['published_date'] == raw_date_pic]
+            else:
+                sources_pic = df_articles[(df_articles['published_date'] == raw_date_pic) & (df_articles['category'] == target)]
             
             if not sources_pic.empty:
                 for _, row in sources_pic.iterrows():
                     url_val = row['url'] if 'url' in row else "#"
-                    st.markdown(f'<a href="{url_val}" target="_blank" class="source-link">- {row["title"]} (Source : {row["source"]})</a>', unsafe_allow_html=True)
+                    cat_info = f" [{row['category']}]" if target == "Tout" else ""
+                    st.markdown(f'<a href="{url_val}" target="_blank" class="source-link">- {row["title"]}{cat_info} (Source : {row["source"]})</a>', unsafe_allow_html=True)
             else:
                 st.info("Aucun détail de source disponible dans la table stg_articles.")
         except:
