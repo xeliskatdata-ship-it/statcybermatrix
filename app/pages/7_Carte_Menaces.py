@@ -3,13 +3,16 @@ import streamlit.components.v1 as components
 import json
 import os
 
-# Configuration de la page
-st.set_page_config(layout="wide", page_title="StatCyberMatrix - Live Map")
+# --- CONFIGURATION ---
+st.set_page_config(layout="wide", page_title="StatCyberMatrix")
 
-def load_map():
-    # 1. SIMULATION / CHARGEMENT DE TES DONNÉES
-    # Ici, remplace par ton code qui récupère tes 3675 articles (df = ...)
-    # IMPORTANT : Chaque article doit avoir 'lat', 'lon', 'severity', 'title', 'source'
+def load_and_display_map():
+    # 1. On récupère le chemin absolu du dossier où se trouve ce script
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    html_path = os.path.join(current_dir, "carte_menace.html")
+
+    # 2. Tes données (NLP / DataFrame)
+    # Remplace cette liste par tes 3675 articles réels
     data_articles = [
         {
             "cat": "failles", 
@@ -20,38 +23,25 @@ def load_map():
             "source": "ANSSI", 
             "conf_score": 9.8,
             "kw": ["RCE", "Exploit"],
-            "summary": "Cette vulnérabilité est actuellement très citée dans les rapports d'incidents APT."
-        },
-        {
-            "cat": "menaces", 
-            "lat": 37.7749, "lon": -122.4194, 
-            "country": "USA", 
-            "title": "Activité APT37 détectée",
-            "severity": "high", 
-            "source": "The Hacker News", 
-            "conf_score": 8.5,
-            "kw": ["APT37", "Malware"],
-            "summary": "Tentatives d'exfiltration de données via ingénierie sociale sur Facebook."
+            "summary": "Analyse NLP : Tentative d'exploitation sur serveur critique."
         }
     ]
-    
-    # Conversion en JSON pour le JavaScript
     json_data = json.dumps(data_articles)
 
-    # 2. LECTURE DU FICHIER HTML
-    # On lit le fichier carte_menace.html que tu as créé
-    if os.path.exists("carte_menace.html"):
-        with open("carte_menace.html", "r", encoding="utf-8") as f:
-            html_template = f.read()
+    # 3. Lecture et injection
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
         
-        # INJECTION DES DONNÉES : On remplace le placeholder dans le HTML
-        # On va chercher la variable 'const EVENTS = [];' dans ton HTML et la remplir
-        final_html = html_template.replace("const EVENTS = [];", f"const EVENTS = {json_data};")
+        # On remplace la variable vide dans ton HTML par les données réelles
+        final_html = html_content.replace("const EVENTS = [];", f"const EVENTS = {json_data};")
         
-        # Affichage du composant
-        components.html(final_html, height=850, scrolling=False)
+        # Affichage
+        components.html(final_html, height=800, scrolling=False)
     else:
-        st.error("Le fichier 'carte_menace.html' est introuvable dans le répertoire.")
+        st.error(f"⚠️ Erreur : Le fichier '{html_path}' est introuvable.")
+        st.info("Vérifiez que le fichier HTML est bien dans le même dossier que le script .py")
 
-# Lancement de l'affichage
-load_map()
+# Lancement
+st.title("🛰️ Radar de Menaces Cyber")
+load_and_display_map()
