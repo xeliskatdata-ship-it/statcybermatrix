@@ -1,4 +1,4 @@
-# 2_kpi2_Mots_cles.py -- Version Treemap avec Liens Hypertextes Dynamiques
+# 2_kpi2_Mots_cles.py -- Version Finale avec Treemap Nettoyé et Liens cliquables
 
 import os
 import sys
@@ -15,7 +15,7 @@ from db_connect import get_mart_k2, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="KPI 2 - Threat Keywords", layout="wide")
 
-# ── CSS GLOBAL (Style StatCyberMatrix) ────────────────────────────────────────
+# ── CSS GLOBAL (Harmonisation KPI 1) ──────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Roboto+Mono:wght@400;700&display=swap');
@@ -25,13 +25,15 @@ st.markdown("""
 .metric-container { background: rgba(15,20,34,0.6); border: 1px solid rgba(168,85,247,0.2); border-radius: 8px; padding: 20px; text-align: center; backdrop-filter: blur(10px); }
 .metric-label { font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; }
 .metric-value { font-family: 'Roboto Mono'; font-size: 2.2rem; font-weight: 700; color: #e2e8f0; }
-/* Style pour les liens d'articles */
-.article-link { color: #a855f7; text-decoration: none; font-weight: 500; }
-.article-link:hover { text-decoration: underline; color: #d8b4fe; }
+/* Style des liens d'articles cliquables */
+.article-card { background: rgba(15,20,34,0.8); border: 1px solid #1e2a42; border-radius: 6px; padding: 12px 16px; margin-bottom: 8px; backdrop-filter: blur(6px); transition: 0.2s; }
+.article-card:hover { border-color: #a855f7; background: rgba(20,28,48,0.9); }
+.article-link { color: #e2e8f0; text-decoration: none; font-size: 0.95rem; font-weight: 500; }
+.article-meta { margin-top: 6px; font-size: 0.75rem; color: #64748b; font-family: 'Roboto Mono'; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── ANIMATION ECG DISCRÈTE (Identique KPI 1) ──────────────────────────────────
+# ── FOND ANIMÉ ECG DISCRET ────────────────────────────────────────────────────
 components.html("""
 <script>
 (function() {
@@ -58,8 +60,6 @@ components.html("""
         ctx.beginPath(); ctx.moveTo(history[k-1].x,history[k-1].y); ctx.lineTo(history[k].x,history[k].y);
         ctx.strokeStyle=isSpike?'rgba(168,85,247,'+alpha+')':'rgba(59,130,246,'+(alpha*0.3)+')';
         ctx.lineWidth=isSpike?2.5:1.2; ctx.stroke();}
-        var head=history[history.length-1];
-        ctx.beginPath(); ctx.arc(head.x,head.y,4,0,Math.PI*2); ctx.fillStyle='rgba(168,85,247,0.8)'; ctx.fill();
       }
       requestAnimationFrame(draw);} draw(); return function(){alive=false;};}
   var stop=startECG();
@@ -67,7 +67,7 @@ components.html("""
 </script>
 """, height=0)
 
-# ── CHARGEMENT ET CALCULS ────────────────────────────────────────────────────
+# ── DATA PROCESSING ──────────────────────────────────────────────────────────
 try:
     df_raw = get_mart_k2()
     v3 = df_raw[df_raw['period_days'] == 3].copy()
@@ -75,86 +75,92 @@ try:
     drift_df = pd.merge(v3, v15, on='keyword', how='left').fillna(0)
     drift_df['acceleration'] = (drift_df['occurrences'] + 1) / ((drift_df['occ_15j'] / 5) + 1)
     if 'category' not in drift_df.columns:
-        drift_df['category'] = 'Threats' 
+        drift_df['category'] = 'Threats'
 except Exception as e:
-    st.error(f"Erreur de données : {e}"); st.stop()
+    st.error(f"Erreur data : {e}"); st.stop()
 
-# ── HEADER & COMPTEURS ────────────────────────────────────────────────────────
+# ── EN-TÊTE ───────────────────────────────────────────────────────────────────
 st.markdown('<div class="page-title">Threat Keywords Intelligence</div>', unsafe_allow_html=True)
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown(f'<div class="metric-container"><div class="metric-label">Mots-clés Actifs</div><div class="metric-value">{len(drift_df)}</div></div>', unsafe_allow_html=True)
 with col2:
-    top_k = drift_df.sort_values('occurrences', ascending=False).iloc[0]['keyword'] if not drift_df.empty else "—"
-    st.markdown(f'<div class="metric-container"><div class="metric-label">Top Volume</div><div class="metric-value" style="color:#a855f7">{top_k}</div></div>', unsafe_allow_html=True)
+    top_v = drift_df.sort_values('occurrences', ascending=False).iloc[0]['keyword'] if not drift_df.empty else "—"
+    st.markdown(f'<div class="metric-container"><div class="metric-label">Top Volume</div><div class="metric-value" style="color:#a855f7">{top_v}</div></div>', unsafe_allow_html=True)
 with col3:
-    fast_k = drift_df.sort_values('acceleration', ascending=False).iloc[0]['keyword'] if not drift_df.empty else "—"
-    st.markdown(f'<div class="metric-container"><div class="metric-label">Top Vélocité</div><div class="metric-value" style="color:#22c55e">{fast_k}</div></div>', unsafe_allow_html=True)
+    top_a = drift_df.sort_values('acceleration', ascending=False).iloc[0]['keyword'] if not drift_df.empty else "—"
+    st.markdown(f'<div class="metric-container"><div class="metric-label">Top Vélocité</div><div class="metric-value" style="color:#22c55e">{top_a}</div></div>', unsafe_allow_html=True)
 with col4:
     if st.button("⟳ Refresh Data", use_container_width=True):
         force_refresh(); st.rerun()
 
-# ── TREEMAP DYNAMIQUE ─────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">Analyse Hiérarchique : Volume & Accélération</div>', unsafe_allow_html=True)
+# ── TREEMAP NETTOYÉ ───────────────────────────────────────────────────────────
+st.markdown('<div class="section-title">Analyse Hiérarchique (Survol pour détails)</div>', unsafe_allow_html=True)
 
-min_accel = st.slider("Filtrer par indice d'émergence (Accélération)", 0.5, 4.0, 1.0, step=0.1)
+min_accel = st.slider("Seuil d'émergence (Indice d'accélération)", 0.5, 3.0, 1.0, step=0.1)
 df_filtered = drift_df[drift_df['acceleration'] >= min_accel]
 
 fig_tree = px.treemap(
     df_filtered,
-    path=[px.Constant("Global Overview"), 'category', 'keyword'],
+    path=[px.Constant("Cyber Threats"), 'category', 'keyword'],
     values='occurrences',
     color='acceleration',
     color_continuous_scale='Purples',
-    range_color=[0.5, 3.0],
-    hover_data={'acceleration': ':.2f', 'occurrences': True, 'source_count': True}
+    range_color=[0.5, 2.5]
+)
+
+# NETTOYAGE DU SURVOL (Hover)
+fig_tree.update_traces(
+    hovertemplate="<b>Menace : %{label}</b><br>Volume : %{value} articles<br>Accélération : %{color:.2f}x<extra></extra>",
+    textinfo="label+value"
 )
 fig_tree.update_layout(margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 st.plotly_chart(fig_tree, use_container_width=True)
 
-# ── GRAPHIQUE BARRES : FIABILITÉ ──────────────────────────────────────────────
-st.markdown('<div class="section-title">Fiabilité du Signal (Sources Uniques)</div>', unsafe_allow_html=True)
+# ── GRAPHIQUE FIABILITÉ DU SIGNAL ─────────────────────────────────────────────
+st.markdown('<div class="section-title">Fiabilité du Signal (Nombre de Sources)</div>', unsafe_allow_html=True)
 
 df_snr = df_filtered.nlargest(15, 'occurrences').sort_values('source_count')
 fig_snr = go.Figure(go.Bar(
     y=df_snr['keyword'], x=df_snr['source_count'],
     orientation='h',
-    marker=dict(color=df_snr['source_count'], colorscale='Purples', line=dict(color='rgba(168,85,247,0.6)', width=1)),
-    hovertemplate="<b>Keyword: %{y}</b><br>Sources uniques: %{x}<extra></extra>"
+    marker=dict(color='#a855f7', line=dict(color='#f0abfc', width=1)),
+    hovertemplate="<b>%{y}</b><br>Sources uniques : %{x}<extra></extra>"
 ))
-fig_snr.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,20,34,0.4)", height=400, font=dict(family="Roboto Mono", color="#94a3b8"))
+fig_snr.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,20,34,0.4)", font=dict(family="Roboto Mono", color="#94a3b8"))
 st.plotly_chart(fig_snr, use_container_width=True)
 
-# ── DEEP DIVE : EXPLORER LES ARTICLES (AVEC LIENS) ────────────────────────────
-st.markdown('<div class="section-title"> Deep Dive : Articles Relatés</div>', unsafe_allow_html=True)
+# ── DEEP DIVE : ARTICLES RÉELS (LIENS CLIQUABLES) ──────────────────────────────
+st.markdown('<div class="section-title">🔍 Deep Dive : Articles Relatés</div>', unsafe_allow_html=True)
 
-selected_kw = st.selectbox("Sélectionner un mot-clé pour extraire les sources", ["-- Choisir un mot-clé --"] + sorted(list(df_filtered['keyword'])))
+selected_kw = st.selectbox("Sélectionner un mot-clé pour voir les articles", ["-- Choisir un mot-clé --"] + sorted(list(df_filtered['keyword'])))
 
 if selected_kw != "-- Choisir un mot-clé --":
     try:
-        # On récupère les articles bruts pour filtrer sur le mot-clé
-        all_articles = get_stg_articles(limit=5000)
-        # Filtre : on cherche le mot-clé dans le titre ou le résumé (insensible à la casse)
+        # On charge les vrais articles (comme dans KPI 1)
+        all_articles = get_stg_articles(limit=2000)
         mask = all_articles['title'].str.contains(selected_kw, case=False, na=False)
-        relevant_articles = all_articles[mask].sort_values('published_date', ascending=False).head(10)
+        relevant = all_articles[mask].sort_values('published_date', ascending=False).head(10)
         
-        if not relevant_articles.empty:
-            st.info(f"Derniers articles identifiés pour le tag : **{selected_kw}**")
-            for _, row in relevant_articles.iterrows():
-                title = row['title']
+        if not relevant.empty:
+            for _, row in relevant.iterrows():
+                titre = row['title']
                 url = row['url']
                 source = row['source']
                 date = str(row['published_date'])[:10]
                 
-                # Affichage propre avec lien hypertexte
+                # HTML identique au design du KPI 1 pour la cohérence
                 st.markdown(f"""
-                <div style="background:rgba(15,20,34,0.6); border:1px solid rgba(168,85,247,0.2); border-radius:6px; padding:10px; margin-bottom:8px;">
-                    <a href="{url}" target="_blank" class="article-link">🔗 {title}</a><br>
-                    <span style="font-size:0.75rem; color:#64748b;">Source : {source} | Publié le : {date}</span>
+                <div class="article-card">
+                    <div><a href="{url}" target="_blank" class="article-link">{titre}</a></div>
+                    <div class="article-meta">
+                        {date} &nbsp;·&nbsp; 
+                        <span style="background:rgba(168,85,247,0.15); color:#d8b4fe; border-radius:4px; padding:1px 8px;">{source}</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.warning(f"Aucun article récent trouvé contenant explicitement le mot-clé '{selected_kw}' dans le titre.")
+            st.warning(f"Aucun article trouvé pour '{selected_kw}' dans les données récentes.")
     except Exception as e:
         st.error(f"Erreur lors de l'extraction des articles : {e}")
