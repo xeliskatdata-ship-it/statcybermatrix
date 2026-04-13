@@ -36,10 +36,6 @@ html,body,[class*="css"]{font-family:'Roboto',sans-serif; color: #ffffff !import
     color: #ffffff !important;
 }
 
-.kpi-tag{display:inline-block;font-family:'Roboto Mono',monospace;font-size:0.65rem;
-letter-spacing:.15em;text-transform:uppercase;color:#3b82f6;background:rgba(59,130,246,.1);
-border:1px solid rgba(59,130,246,.2);border-radius:4px;padding:3px 10px;margin-bottom:14px;}
-
 .page-title {
     text-align: center; font-size: 2.8rem; font-weight: 700; color: #3b82f6;
     margin-bottom: 20px; text-shadow: 0 0 15px rgba(59,130,246,0.5);
@@ -53,7 +49,7 @@ border-radius:20px;padding:4px 12px;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 .insight-box {
-    background: rgba(5, 10, 20, 0.7);
+    background: rgba(10, 20, 40, 0.8);
     border: 1px solid rgba(59, 130, 246, 0.3);
     border-radius: 8px; padding: 25px; margin: 15px auto;
     backdrop-filter: blur(10px); max-width: 95%;
@@ -64,11 +60,12 @@ border-radius:20px;padding:4px 12px;}
     border: 1px solid #3b82f6;
     border-radius: 5px; padding: 15px; margin-top: 15px;
     font-family: 'Roboto Mono', monospace;
+    color: #ffffff;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── FOND ANIMÉ (PLUIE DE CODE) ──────────────────────────────────────────────
+# ── FOND ANIMÉ (PLUIE DE CODE EN ARRIERE-PLAN) ──────────────────────────────
 components.html("""
 <script>
 (function() {
@@ -76,7 +73,7 @@ components.html("""
   function startCodeRain(){
     var old=p.getElementById('sentinel-rain-bg-k5'); if(old)old.parentNode.removeChild(old);
     var cv=p.createElement('canvas'); cv.id='sentinel-rain-bg-k5';
-    cv.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;opacity:0.12;';
+    cv.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;opacity:0.15;';
     p.body.appendChild(cv);
     var ctx=cv.getContext('2d'), W=cv.width=w.innerWidth, H=cv.height=w.innerHeight;
     var codeSymbols = "01ABCDEFSRATCVEAPTIPMALWARERANSOMWAREINFOCREDENTIALSBREACH".split("");
@@ -84,7 +81,7 @@ components.html("""
     for (var i = 0; i < columns; i++) { drops[i] = Math.random() * (H / fontSize); }
     function draw(){
       if(!p.getElementById('sentinel-rain-bg-k5'))return;
-      ctx.fillStyle = 'rgba(5, 10, 20, 0.08)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(5, 10, 20, 0.1)'; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#3b82f6'; ctx.font = fontSize + 'px Roboto Mono';
       for (var i = 0; i < drops.length; i++) {
         var text = codeSymbols[Math.floor(Math.random() * codeSymbols.length)];
@@ -129,7 +126,6 @@ except Exception as e:
     st.stop()
 
 # ── EN-TETE ──────────────────────────────────────────────────────────────────
-st.markdown('<div class="kpi-tag">KPI 5</div>', unsafe_allow_html=True)
 st.markdown('<div class="page-title">Threat Intelligence Matrix</div>', unsafe_allow_html=True)
 
 _, col_r, col_b, _ = st.columns([2, 1, 2, 2])
@@ -270,22 +266,21 @@ if total_hits > 0 and not ranking.empty:
     pic_val = int(weekly_stats.max())
     deviation_pic = round(((pic_val - avg_hits) / avg_hits * 100), 1) if avg_hits > 0 else 0
 
-    mot_alerte = "alertes" if total_hits > 1 else "alerte"
-    verbe_repres = "representent" if nb_cat_80 > 1 else "represente"
-
     st.markdown(f"""
     <div class="insight-box">
         <div style="font-family:'Roboto Mono'; color:#3b82f6; margin-bottom:15px; font-weight:700;">
             > ANALYSE DECISIONNELLE DU FLUX
         </div>
-        - <b>Loi de Pareto :</b> Seules <b>{nb_cat_80} categories</b> sur {nb_vecteurs} {verbe_repres} plus de 80% du volume total ({total_hits} {mot_alerte}). 
-          L'effort de remediation doit se concentrer prioritairement sur <b>{top_cat}</b> ({top_pct}% du flux).<br><br>
+        Loi de Pareto : Seules {nb_cat_80} categories sur {nb_vecteurs} representent plus de 80% du volume total ({total_hits} alertes). 
+        L'effort de remediation doit se concentrer prioritairement sur {top_cat} ({top_pct}% du flux).
         
-        - <b>Analyse de Pic :</b> Un maximum d'activite a ete detecte la semaine du <b>{pic_semaine}</b> avec <b>{pic_val} alertes</b>, 
-          soit une hausse de <b>{deviation_pic}%</b> par rapport a la charge habituelle. <br><br>
+        <div class="alert-highlight">
+        Analyse de Pic : Un maximum d'activite a ete detecte la semaine du {pic_semaine} avec {pic_val} alertes, 
+        soit une hausse de {deviation_pic}% par rapport a la charge habituelle.
+        </div>
         
-        - <b>Stabilite du Signal :</b> Avec une volatilite de <b>{volatility}</b> ({'Signal stable' if is_stable else 'Signal bruyant/instable'}), 
-          le consultant doit {'maintenir les seuils actuels' if is_stable else 'revoir les politiques de correlation pour reduire la fatigue des analystes'}.
+        Stabilite du Signal : Avec une volatilite de {volatility} ({'Signal stable' if is_stable else 'Signal bruyant/instable'}), 
+        le consultant doit {'maintenir les seuils actuels' if is_stable else 'revoir les politiques de correlation pour reduire la fatigue des analystes'}.
     </div>
     """, unsafe_allow_html=True)
 
