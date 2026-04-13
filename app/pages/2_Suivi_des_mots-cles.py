@@ -1,4 +1,4 @@
-# 2_kpi2_Mots_cles.py -- Version Sentinel Rain Green Edition (Améliorée)
+# 2_kpi2_Mots_cles.py -- Version Sentinel Rain Green (Style KPI 3)
 
 import os
 import sys
@@ -15,81 +15,103 @@ from db_connect import get_mart_k2, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="KPI 2 - Threat Keywords", layout="wide")
 
-# ── CSS GLOBAL (Écritures Blanches & Slider Rouge) ───────────────────────────
+# ── CSS GLOBAL (Style KPI 3 + Ajustements Vert/Blanc/Rouge) ──────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Roboto+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;700&display=swap');
 
-/* Fond et textes de base */
-.stApp { background-color: #050a14 !important; color: #ffffff !important; }
+html, body, [class*="css"] { font-family: 'Roboto', sans-serif; }
 
-/* Titre principal blanc */
-.page-title { 
-    text-align:center; font-size:2.8rem; font-weight:700; color:#ffffff !important; 
-    margin-bottom:20px; text-shadow: 0 0 15px rgba(50,205,50,0.5); 
+.stApp {
+    background: radial-gradient(ellipse at 20% 50%, rgba(14,40,80,0.9) 0%, #050a14 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(8,30,60,0.8) 0%, transparent 50%);
+    background-color: #050a14 !important;
 }
 
-/* En-têtes de section blancs */
+/* On s'assure que le contenu est au-dessus de l'animation */
+[data-testid="stAppViewContainer"] > * { position: relative; z-index: 1; }
+
+.page-title {
+    text-align: center; font-size: 2.8rem; font-weight: 700; color: #ffffff !important;
+    margin-bottom: 20px; text-shadow: 0 0 15px rgba(50,205,50,0.4);
+}
+
 .section-header-centered {
-    text-align:center; font-family:'Roboto Mono',monospace; font-size:1.2rem;
-    letter-spacing:.1em; text-transform:uppercase; color:#ffffff !important;
-    border-bottom:1px solid rgba(50,205,50,0.5); width:fit-content;
+    text-align:center; font-family:'Roboto Mono',monospace; font-size:1.1rem;
+    letter-spacing:.1em; text-transform:uppercase; color:#32CD32;
+    border-bottom:1px solid rgba(50,205,50,0.3); width:fit-content;
     margin:40px auto 20px; padding-bottom:8px;
 }
 
-/* Écritures blanches partout */
+/* Écritures blanches pour tout le texte Streamlit */
 [data-testid="stMarkdownContainer"] p, .stSelectbox label, .stSlider label {
     color: #ffffff !important;
-    font-weight: 500;
 }
 
-/* Personnalisation du Slider : ROUGE VIF */
-div[data-baseweb="slider"] > div > div {
-    background: #ff0000 !important; /* Barre du slider */
-}
-div[role="slider"] {
-    background-color: #ff0000 !important; /* Bouton du slider */
-    border: 2px solid #ffffff !important;
-}
+/* Slider Rouge Vif */
+div[data-baseweb="slider"] > div > div { background: #ff0000 !important; }
+div[role="slider"] { background-color: #ff0000 !important; border: 2px solid #ffffff !important; }
 
-/* Cartes d'articles */
 .article-card { background: rgba(15,20,34,0.8); border: 1px solid #1e2a42; border-radius: 6px; padding: 12px 16px; margin-bottom: 8px; }
-.article-link { color: #ffffff; text-decoration: none; font-size: 0.95rem; font-weight: 500; }
-.article-link:hover { color: #32CD32; }
+.article-link { color: #ffffff !important; text-decoration: none; font-size: 0.95rem; font-weight: 500; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── FOND ANIMÉ : SENTINEL CODE RAIN (Placé en arrière-plan) ──────────────────
+# ── FOND ANIMÉ : SENTINEL CODE RAIN (Structure technique KPI 3) ──────────────
 components.html("""
 <script>
 (function() {
-  var p = window.parent.document, w = window.parent;
-  function startCodeRain(){
-    var old=p.getElementById('sentinel-rain-bg'); if(old)old.parentNode.removeChild(old);
-    var cv=p.createElement('canvas'); cv.id='sentinel-rain-bg';
-    // z-index: -1 pour passer DERRIÈRE les graphiques et textes
-    cv.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;opacity:0.15;';
+  var p = window.parent.document;
+  var w = window.parent;
+
+  function startCodeRain() {
+    var old = p.getElementById('sentinel-rain-bg-k2');
+    if (old) old.parentNode.removeChild(old);
+
+    var cv = p.createElement('canvas');
+    cv.id = 'sentinel-rain-bg-k2';
+    // Le z-index: 0 et le position: fixed assurent qu'il reste derrière le contenu Streamlit
+    cv.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0.12;';
     p.body.appendChild(cv);
-    var ctx=cv.getContext('2d'), W=cv.width=w.innerWidth, H=cv.height=w.innerHeight;
-    var codeSymbols = "01ABCDEF💀RATCVEAPTIPMALWARERANSOMWAREINFOCREDENTIALSBREACH".split("");
-    var fontSize = 14; var columns = W / fontSize; var drops = [];
-    for (var x = 0; x < columns; x++) { drops[x] = Math.random() * (H / fontSize); }
-    function draw(){
-      if(!p.getElementById('sentinel-rain-bg'))return;
-      ctx.fillStyle = 'rgba(5, 10, 20, 0.05)'; ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = '#32CD32'; ctx.font = fontSize + 'px Roboto Mono';
+
+    var ctx = cv.getContext('2d');
+    var W = cv.width = w.innerWidth;
+    var H = cv.height = w.innerHeight;
+
+    var symbols = "01ABCDEF💀RATCVEAPTIPMALWARERANSOMWAREINFOCREDENTIALSBREACH".split("");
+    var fontSize = 14;
+    var columns = W / fontSize;
+    var drops = [];
+    for (var i = 0; i < columns; i++) { drops[i] = Math.random() * (H / fontSize); }
+
+    function draw() {
+      if (!p.getElementById('sentinel-rain-bg-k2')) return;
+      ctx.fillStyle = 'rgba(5, 10, 20, 0.1)'; 
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#32CD32'; 
+      ctx.font = fontSize + 'px Roboto Mono';
+
       for (var i = 0; i < drops.length; i++) {
-        var text = codeSymbols[Math.floor(Math.random() * codeSymbols.length)];
+        var text = symbols[Math.floor(Math.random() * symbols.length)];
         ctx.fillText(text, i * fontSize, drops[i] * fontSize);
         drops[i]++;
         if (drops[i] * fontSize > H && Math.random() > 0.975) { drops[i] = 0; }
       }
       requestAnimationFrame(draw);
     }
-    draw(); 
-    w.addEventListener('resize', function(){W=cv.width=w.innerWidth; H=cv.height=w.innerHeight;});
+    draw();
+
+    w.addEventListener('resize', function() {
+      W = cv.width = w.innerWidth;
+      H = cv.height = w.innerHeight;
+    });
   }
+
   startCodeRain();
+  // Relance si changement de page (propre à Streamlit)
+  setInterval(function() {
+    if (!p.getElementById('sentinel-rain-bg-k2')) startCodeRain();
+  }, 2000);
 })();
 </script>
 """, height=0)
@@ -116,12 +138,11 @@ components.html(f"""
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Roboto+Mono:wght@700&display=swap');
 .grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; font-family: 'Roboto', sans-serif; }}
 .card {{ 
-    background: rgba(15,20,34,0.6); border: 1px solid rgba(50,205,50,0.3); 
+    background: rgba(15,20,34,0.8); border: 1px solid rgba(50,205,50,0.3); 
     border-radius: 8px; padding: 18px; text-align: center; color: #ffffff;
-    transition: all 0.3s ease; cursor: default; backdrop-filter: blur(10px);
+    backdrop-filter: blur(8px);
 }}
-.card:hover {{ border-color: #32CD32; box-shadow: 0 0 15px rgba(50,205,50,0.4); }}
-.label {{ font-size: 0.75rem; text-transform: uppercase; margin-bottom: 8px; color: #ffffff; opacity: 0.8; }}
+.label {{ font-size: 0.75rem; text-transform: uppercase; margin-bottom: 8px; color: #ffffff; opacity: 0.7; }}
 .value {{ font-family: 'Roboto Mono'; font-size: 2rem; font-weight: 700; color: #ffffff; }}
 .btn {{ 
     background: rgba(50,205,50,0.1); border: 1px solid #32CD32; color: #32CD32;
@@ -130,8 +151,8 @@ components.html(f"""
 </style>
 <div class="grid">
   <div class="card"><div class="label">Mots-clés Actifs</div><div class="value" id="count-k2">0</div></div>
-  <div class="card"><div class="label">Top Volume</div><div class="value">{top_v}</div></div>
-  <div class="card"><div class="label">Top Vélocité</div><div class="value">{top_a}</div></div>
+  <div class="card"><div class="label">Top Volume</div><div class="value" style="color:#32CD32">{top_v}</div></div>
+  <div class="card"><div class="label">Top Vélocité</div><div class="value" style="color:#32CD32">{top_a}</div></div>
   <div class="card" style="border:none; background:transparent;"><button class="btn" onclick="window.parent.location.reload()">⟳ REFRESH DATA</button></div>
 </div>
 <script>
@@ -146,7 +167,7 @@ function animateValue(id, start, end, duration) {{
     }};
     window.requestAnimationFrame(step);
 }}
-animateValue("count-k2", 0, {nb_mots_cles}, 1500);
+animateValue("count-k2", 0, {nb_mots_cles}, 1200);
 </script>
 """, height=130)
 
@@ -159,11 +180,11 @@ with f_col:
 
 df_filtered = drift_df[drift_df['acceleration'] >= min_accel]
 
-# Configuration Graphique commune (Texte Blanc)
+# Config Plotly (Écritures Blanches comme KPI 3)
 PLOT_STYLE = dict(
     paper_bgcolor="rgba(0,0,0,0)", 
-    plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(family="Roboto Mono", color="#ffffff", size=14)
+    plot_bgcolor="rgba(15,20,34,0.6)",
+    font=dict(family="Roboto Mono", color="#ffffff", size=13)
 )
 
 fig_tree = px.treemap(
@@ -171,31 +192,33 @@ fig_tree = px.treemap(
     path=[px.Constant("Cyber Overview"), 'category', 'keyword'],
     values='occurrences',
     color='acceleration',
-    color_continuous_scale=['#0a1a0a', '#32CD32', '#7fff00'],
+    color_continuous_scale=['#050a14', '#1b4d1b', '#32CD32', '#7fff00'],
     range_color=[0.5, 2.5]
 )
 fig_tree.update_traces(textinfo="label+value", textfont=dict(color="white"))
 fig_tree.update_layout(margin=dict(t=0, b=0, l=10, r=10), **PLOT_STYLE)
 st.plotly_chart(fig_tree, use_container_width=True)
 
-st.markdown('<div class="section-header-centered">Fiabilité du Signal</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header-centered">Fiabilité du Signal (Sources Uniques)</div>', unsafe_allow_html=True)
 df_snr = df_filtered.nlargest(15, 'occurrences').sort_values('source_count')
 fig_snr = go.Figure(go.Bar(
     y=df_snr['keyword'], x=df_snr['source_count'],
     orientation='h',
-    marker=dict(color='#32CD32', line=dict(color='#7fff00', width=1)),
+    marker=dict(color='#32CD32', line=dict(color='#ffffff', width=0.5)),
+    hovertemplate="<b>%{y}</b><br>Sources : %{x}<extra></extra>"
 ))
 fig_snr.update_layout(
     **PLOT_STYLE,
-    xaxis=dict(gridcolor="rgba(255,255,255,0.1)", tickfont=dict(color="#ffffff"))
+    xaxis=dict(gridcolor="rgba(255,255,255,0.1)", tickfont=dict(color="#ffffff")),
+    yaxis=dict(tickfont=dict(color="#ffffff"))
 )
 st.plotly_chart(fig_snr, use_container_width=True)
 
 # ── DEEP DIVE ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="section-header-centered">🔍 Deep Dive : Articles Relatés</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header-centered">🔍 Explorer les Articles</div>', unsafe_allow_html=True)
 _, d_col, _ = st.columns([1, 2, 1])
 with d_col:
-    selected_kw = st.selectbox("Sélectionner une menace", ["-- Choisir --"] + sorted(list(df_filtered['keyword'])))
+    selected_kw = st.selectbox("Filtrer par mot-clé", ["-- Choisir --"] + sorted(list(df_filtered['keyword'])))
 
 if selected_kw != "-- Choisir --":
     all_articles = get_stg_articles(limit=1000)
