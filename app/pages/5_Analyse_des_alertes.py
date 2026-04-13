@@ -67,7 +67,7 @@ border-radius:20px;padding:4px 12px;}
 </style>
 """, unsafe_allow_html=True)
 
-# ── FOND ANIMÉ MATRIX ─────────────────────────────────────────────────────
+# ── FOND ANIMÉ MATRIX (CORRIGÉ) ───────────────────────────────────────────
 components.html("""
 <script>
 (function() {
@@ -80,14 +80,14 @@ components.html("""
     
     var cv = p.createElement('canvas');
     cv.id = 'matrix-rain-k5';
-    cv.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;opacity:0.15;';
+    cv.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;opacity:0.2;';
     body.appendChild(cv);
     
     var ctx = cv.getContext('2d');
     var W = cv.width = window.parent.innerWidth;
     var H = cv.height = window.parent.innerHeight;
     
-    var symbols = "01ABCDEFSRATCVEAPTIPMALWARERANSOMWAREINFOCREDENTIALSBREACH".split("");
+    var symbols = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
     var fontSize = 14;
     var columns = W / fontSize;
     var drops = [];
@@ -105,14 +105,10 @@ components.html("""
         if (drops[i] * fontSize > H && Math.random() > 0.975) { drops[i] = 0; }
       }
     }
-    setInterval(draw, 33);
-    
-    window.parent.addEventListener('resize', function(){
-      W = cv.width = window.parent.innerWidth;
-      H = cv.height = window.parent.innerHeight;
-    });
+    setInterval(draw, 35);
   }
-  startCodeRain();
+  if (p.readyState === 'complete') { startCodeRain(); } 
+  else { window.parent.addEventListener('load', startCodeRain); }
 })();
 </script>
 """, height=0)
@@ -161,11 +157,11 @@ _section_title("Analyse Décisionnelle et Densité")
 col_l, col_r = st.columns([1, 1])
 
 with col_l:
-    st.markdown("<div class="graph-header">Densité Temporelle (Heatmap)</div>", unsafe_allow_html=True)
+    st.markdown("<div class='graph-header'>Densité Temporelle (Heatmap)</div>", unsafe_allow_html=True)
     pivot_df = df.pivot_table(index='category', columns='semaine', values='nb_alertes', aggfunc='sum')
     fig_heat = px.imshow(pivot_df, color_continuous_scale='Blues', aspect="auto")
     
-    # Nettoyage de l'axe X : Uniquement la date, pas de 00:00
+    # Nettoyage de l'axe X : Uniquement la date
     fig_heat.update_xaxes(tickformat="%d/%m/%y")
     
     fig_heat.update_traces(hovertemplate="Date: %{x|%d/%m/%Y}<br>Catégorie: %{y}<br>Alertes: %{z}<extra></extra>")
@@ -174,7 +170,7 @@ with col_l:
     st.plotly_chart(fig_heat, use_container_width=True)
 
 with col_r:
-    st.markdown("<div class="graph-header">Profil de Menace (Radar)</div>", unsafe_allow_html=True)
+    st.markdown("<div class='graph-header'>Profil de Menace (Radar)</div>", unsafe_allow_html=True)
     radar_data = df.groupby('category')['nb_alertes'].mean().reset_index()
     fig_radar = go.Figure(go.Scatterpolar(
         r=radar_data['nb_alertes'], theta=radar_data['category'], fill='toself', line_color='#3b82f6',
