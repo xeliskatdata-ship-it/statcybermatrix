@@ -8,14 +8,12 @@
         * { margin:0; padding:0; box-sizing:border-box; }
         body { background: #010409; font-family: 'Syne', sans-serif; color: #e8f0fe; overflow: hidden; }
         
-        /* Conteneur de la carte avec filtre Cyber */
         #map { 
             height: 100vh; width: 100vw; 
             background: #010409;
             filter: brightness(0.7) contrast(1.2) saturate(1.2) hue-rotate(190deg);
         }
 
-        /* Animation des marqueurs Radar */
         .mk-wrap { display: flex; align-items: center; justify-content: center; position: relative; }
         .mk-dot { border-radius: 50%; z-index: 2; box-shadow: 0 0 15px var(--mk-color); }
         .mk-ring { 
@@ -24,7 +22,6 @@
         }
         @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(3.5); opacity: 0; } }
 
-        /* Style des Popups (Fiche technique style tes captures) */
         .cyber-popup .leaflet-popup-content-wrapper {
             background: rgba(13, 20, 35, 0.95) !important;
             border: 1px solid #1e6fff; border-radius: 4px; color: #fff;
@@ -41,22 +38,17 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script>
-        // LE PYHTON REMPLACERA CETTE LIGNE PAR LES DONNÉES RÉELLES
         const EVENTS = []; 
 
         const CFG = {
             failles: '#ff003c', infra: '#1e6fff', editeurs: '#ff9f00', menaces: '#a855f7'
         };
 
-        // Initialisation Carte (Centrée sur l'Atlantique pour voir Europe/USA)
         const map = L.map('map', { center: [30, -10], zoom: 3, zoomControl: false, attributionControl: false });
-        
-        // Fond de carte sombre (CartoDB Dark Matter)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // Ajout des marqueurs
         EVENTS.forEach(ev => {
-            const color = CFG[ev.cat] || '#00ff41';
+            const color = CFG[ev.category] || '#00ff41';
             const size = ev.severity === 'critical' ? 10 : 6;
             
             const icon = L.divIcon({
@@ -67,18 +59,20 @@
                 className: '', iconSize: [size*4, size*4]
             });
 
-            L.marker([ev.lat, ev.lon], {icon: icon}).addTo(map)
-             .bindPopup(`
-                <div class="cyber-popup">
-                    <div class="pp-header">FICHE : ${ev.title}</div>
-                    <div class="pp-body">
-                        <strong>Sévérité NVD :</strong> <span class="pp-sev">${ev.severity.toUpperCase()}</span> (Score: ${ev.conf_score})<br><br>
-                        ${ev.summary}<br>
-                        <div style="margin-top:5px; color:#1e6fff;">#${ev.kw.join(' #')}</div>
+            if (ev.latitude && ev.longitude) {
+                L.marker([ev.latitude, ev.longitude], {icon: icon}).addTo(map)
+                 .bindPopup(`
+                    <div class="cyber-popup">
+                        <div class="pp-header">FICHE : ${ev.title}</div>
+                        <div class="pp-body">
+                            <strong>Sévérité :</strong> <span class="pp-sev">${ev.severity}</span> (Score: ${ev.confidence_score})<br><br>
+                            ${ev.summary}<br>
+                            <div style="margin-top:5px; color:#1e6fff;">#${ev.keywords ? ev.keywords.join(' #') : ''}</div>
+                        </div>
+                        <div class="pp-footer">Source: ${ev.source} | Pays: ${ev.country}</div>
                     </div>
-                    <div class="pp-footer">Source: ${ev.source} | Pays: ${ev.country}</div>
-                </div>
-             `, { maxWidth: 300 });
+                 `, { maxWidth: 300 });
+            }
         });
     </script>
 </body>
