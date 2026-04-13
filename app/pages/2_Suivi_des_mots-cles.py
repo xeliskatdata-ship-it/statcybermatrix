@@ -37,39 +37,75 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── ANIMATION ECG (Style KPI 1) ───────────────────────────────────────────────
+# --- NOUVEAU FOND ANIMÉ : Sentinel Code Rain (Remplace l'ECG) ---
 components.html("""
 <script>
 (function() {
   var p = window.parent.document, w = window.parent;
-  var PT_SIZE=24, TRAIL_PX=270, SPD=2.5;
-  function ecgValue(x,H){var margin=PT_SIZE+10,maxAmp=H/2-margin,mod=x%220,raw;
-    if(mod<70)raw=Math.sin(mod*0.05)*5;else if(mod<80)raw=(mod-70)*13;
-    else if(mod<85)raw=130-(mod-80)*55;else if(mod<90)raw=-145+(mod-85)*32;
-    else if(mod<100)raw=-25+(mod-90)*3;else if(mod<115)raw=Math.sin((mod-100)*0.4)*9;
-    else raw=Math.sin(mod*0.04)*3;return(raw/130)*maxAmp;}
-  function startECG(){
-    var old=p.getElementById('ecg-bg-k2'); if(old)old.parentNode.removeChild(old);
-    var cv=p.createElement('canvas'); cv.id='ecg-bg-k2';
-    cv.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;';
-    p.body.appendChild(cv); var ctx=cv.getContext('2d'),ecgX=0,history=[],alive=true;
-    function resize(){cv.width=p.documentElement.clientWidth;cv.height=p.documentElement.clientHeight;}
-    resize(); w.addEventListener('resize',resize);
-    function draw(){if(!p.getElementById('ecg-bg-k2')||!alive)return;
-      var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H);
-      history.push({x:ecgX%W,y:H/2-ecgValue(ecgX,H)}); ecgX+=SPD;
-      if(history.length>Math.round(TRAIL_PX/SPD))history.shift();
-      if(history.length>1){for(var k=1;k<history.length;k++){
-        var alpha=(k/history.length)*0.6, isSpike=Math.abs(history[k].y-H/2)>H*0.08;
-        ctx.beginPath(); ctx.moveTo(history[k-1].x,history[k-1].y); ctx.lineTo(history[k].x,history[k].y);
-        ctx.strokeStyle=isSpike?'rgba(168,85,247,'+alpha+')':'rgba(59,130,246,'+(alpha*0.3)+')';
-        ctx.lineWidth=isSpike?3:1.5; ctx.stroke();}
+  
+  // Fonction pour démarrer la pluie de code
+  function startCodeRain(){
+    // Nettoyage de l'ancienne animation si elle existe
+    var old=p.getElementById('sentinel-rain-bg'); if(old)old.parentNode.removeChild(old);
+    
+    // Création du Canvas
+    var cv=p.createElement('canvas'); cv.id='sentinel-rain-bg';
+    cv.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none; opacity: 0.12;'; // Opacité très faible
+    p.body.appendChild(cv);
+    
+    var ctx=cv.getContext('2d'), W=cv.width=w.innerWidth, H=cv.height=w.innerHeight;
+    
+    // Config Cyber-Rain (Hexa, Binary, Threat terms)
+    var codeSymbols = "01ABCDEF💀RATCVEAPTIPMALWARERANSOMWAREINFOCREDENTIALSBREACH";
+    codeSymbols = codeSymbols.split("");
+    
+    var fontSize = 14;
+    var columns = W / fontSize;
+    var drops = [];
+    
+    // Initialisation des colonnes (position Y aléatoire)
+    for (var x = 0; x < columns; x++) {{ drops[x] = Math.random() * (H / fontSize); }}
+    
+    var alive=true;
+    
+    // Fonction de dessin récursive
+    function draw(){
+      if(!p.getElementById('sentinel-rain-bg')||!alive)return;
+      
+      // Fond semi-transparent pour l'effet de traînée
+      ctx.fillStyle = 'rgba(5, 10, 20, 0.05)';
+      ctx.fillRect(0, 0, W, H);
+      
+      // Style du code défilant (Teinte violette subtile)
+      ctx.fillStyle = '#a855f7'; 
+      ctx.font = fontSize + 'px Roboto Mono, monospace';
+      
+      for (var i = 0; i < drops.length; i++) {{
+        var text = codeSymbols[Math.floor(Math.random() * codeSymbols.length)];
+        
+        // On dessine le symbole
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+        
+        // On fait descendre la goutte
+        drops[i]++;
+        
+        // Si elle touche le bas, on la remet en haut aléatoirement
+        if (drops[i] * fontSize > H && Math.random() > 0.975) {{
+          drops[i] = 0;
+        }
       }
-      requestAnimationFrame(draw);} draw(); return function(){alive=false;};}
-  var stop=startECG();
+      requestAnimationFrame(draw);
+    }
+    
+    draw(); 
+    w.addEventListener('resize', function(){W=cv.width=w.innerWidth; H=cv.height=w.innerHeight;});
+    return function(){alive=false;};
+  }
+  
+  var stop = startCodeRain();
 })();
 </script>
-""", height=0)
+""", height=0)ss
 
 # ── DATA PROCESSING ──────────────────────────────────────────────────────────
 try:
