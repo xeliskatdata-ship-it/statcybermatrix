@@ -1,4 +1,4 @@
-# 2_kpi2_Mots_cles.py -- Version Sentinel Rain Green (Style KPI 3)
+# 2_kpi2_Mots_cles.py -- Version Sentinel Rain Green (Style KPI 3 avec Insights)
 
 import os
 import sys
@@ -28,7 +28,6 @@ html, body, [class*="css"] { font-family: 'Roboto', sans-serif; }
     background-color: #050a14 !important;
 }
 
-/* On s'assure que le contenu est au-dessus de l'animation */
 [data-testid="stAppViewContainer"] > * { position: relative; z-index: 1; }
 
 .page-title {
@@ -43,12 +42,24 @@ html, body, [class*="css"] { font-family: 'Roboto', sans-serif; }
     margin:40px auto 20px; padding-bottom:8px;
 }
 
-/* Écritures blanches pour tout le texte Streamlit */
+/* Boîte d'analyse style KPI 3 */
+.insight-box {
+    background: rgba(50, 205, 50, 0.07);
+    border: 1px solid rgba(50, 205, 50, 0.2);
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin: 10px auto 30px;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    backdrop-filter: blur(8px);
+    border-left: 4px solid #32CD32;
+    max-width: 90%;
+}
+
 [data-testid="stMarkdownContainer"] p, .stSelectbox label, .stSlider label {
     color: #ffffff !important;
 }
 
-/* Slider Rouge Vif */
 div[data-baseweb="slider"] > div > div { background: #ff0000 !important; }
 div[role="slider"] { background-color: #ff0000 !important; border: 2px solid #ffffff !important; }
 
@@ -57,42 +68,35 @@ div[role="slider"] { background-color: #ff0000 !important; border: 2px solid #ff
 </style>
 """, unsafe_allow_html=True)
 
-# ── TITRE DE LA PAGE RÉTABLI ─────────────────────────────────────────────────
 st.markdown('<div class="page-title">Suivi des mots-clés</div>', unsafe_allow_html=True)
 
-# ── FOND ANIMÉ : SENTINEL CODE RAIN (Structure technique KPI 3) ──────────────
+# ── FOND ANIMÉ : SENTINEL CODE RAIN ──────────────────────────────────────────
 components.html("""
 <script>
 (function() {
   var p = window.parent.document;
   var w = window.parent;
-
   function startCodeRain() {
     var old = p.getElementById('sentinel-rain-bg-k2');
     if (old) old.parentNode.removeChild(old);
-
     var cv = p.createElement('canvas');
     cv.id = 'sentinel-rain-bg-k2';
     cv.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0.12;';
     p.body.appendChild(cv);
-
     var ctx = cv.getContext('2d');
     var W = cv.width = w.innerWidth;
     var H = cv.height = w.innerHeight;
-
     var symbols = "01ABCDEF💀RATCVEAPTIPMALWARERANSOMWAREINFOCREDENTIALSBREACH".split("");
     var fontSize = 14;
     var columns = W / fontSize;
     var drops = [];
     for (var i = 0; i < columns; i++) { drops[i] = Math.random() * (H / fontSize); }
-
     function draw() {
       if (!p.getElementById('sentinel-rain-bg-k2')) return;
       ctx.fillStyle = 'rgba(5, 10, 20, 0.1)'; 
       ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = '#32CD32'; 
       ctx.font = fontSize + 'px Roboto Mono';
-
       for (var i = 0; i < drops.length; i++) {
         var text = symbols[Math.floor(Math.random() * symbols.length)];
         ctx.fillText(text, i * fontSize, drops[i] * fontSize);
@@ -102,17 +106,9 @@ components.html("""
       requestAnimationFrame(draw);
     }
     draw();
-
-    w.addEventListener('resize', function() {
-      W = cv.width = w.innerWidth;
-      H = cv.height = w.innerHeight;
-    });
+    w.addEventListener('resize', function() { W = cv.width = w.innerWidth; H = cv.height = w.innerHeight; });
   }
-
   startCodeRain();
-  setInterval(function() {
-    if (!p.getElementById('sentinel-rain-bg-k2')) startCodeRain();
-  }, 2000);
 })();
 </script>
 """, height=0)
@@ -129,7 +125,7 @@ try:
 except Exception as e:
     st.error(f"Erreur data : {e}"); st.stop()
 
-# ── MÉTRIQUES (Texte blanc pur) ──────────────────────────────────────────────
+# ── MÉTRIQUES ────────────────────────────────────────────────────────────────
 nb_mots_cles = len(drift_df)
 top_v = drift_df.sort_values('occurrences', ascending=False).iloc[0]['keyword'] if not drift_df.empty else "—"
 top_a = drift_df.sort_values('acceleration', ascending=False).iloc[0]['keyword'] if not drift_df.empty else "—"
@@ -172,7 +168,7 @@ animateValue("count-k2", 0, {nb_mots_cles}, 1200);
 </script>
 """, height=130)
 
-# ── TREEMAP ET GRAPHIQUE ──────────────────────────────────────────────────────
+# ── TREEMAP ──────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-header-centered">Analyse Hiérarchique</div>', unsafe_allow_html=True)
 
 _, f_col, _ = st.columns([1, 2, 1])
@@ -181,7 +177,6 @@ with f_col:
 
 df_filtered = drift_df[drift_df['acceleration'] >= min_accel]
 
-# Config Plotly (Écritures Blanches comme KPI 3)
 PLOT_STYLE = dict(
     paper_bgcolor="rgba(0,0,0,0)", 
     plot_bgcolor="rgba(15,20,34,0.6)",
@@ -200,6 +195,17 @@ fig_tree.update_traces(textinfo="label+value", textfont=dict(color="white"))
 fig_tree.update_layout(margin=dict(t=0, b=0, l=10, r=10), **PLOT_STYLE)
 st.plotly_chart(fig_tree, use_container_width=True)
 
+# PHRASE D'ANALYSE DYNAMIQUE 1
+if not df_filtered.empty:
+    top_accel_row = df_filtered.sort_values('acceleration', ascending=False).iloc[0]
+    st.markdown(f"""
+    <div class="insight-box">
+        <b>Analyse de vélocité :</b> Le mot-clé <b>{top_accel_row['keyword']}</b> présente la plus forte accélération 
+        ({top_accel_row['acceleration']:.2f}x). Cela indique une tendance émergente ou une campagne active détectée sur les dernières 72h.
+    </div>
+    """, unsafe_allow_html=True)
+
+# ── BAR CHART SNR ─────────────────────────────────────────────────────────────
 st.markdown('<div class="section-header-centered">Fiabilité du Signal (Sources Uniques)</div>', unsafe_allow_html=True)
 df_snr = df_filtered.nlargest(15, 'occurrences').sort_values('source_count')
 fig_snr = go.Figure(go.Bar(
@@ -214,6 +220,16 @@ fig_snr.update_layout(
     yaxis=dict(tickfont=dict(color="#ffffff"))
 )
 st.plotly_chart(fig_snr, use_container_width=True)
+
+# PHRASE D'ANALYSE DYNAMIQUE 2
+if not df_snr.empty:
+    reliable_kw = df_snr.sort_values('source_count', ascending=False).iloc[0]
+    st.markdown(f"""
+    <div class="insight-box">
+        <b>Fiabilité du signal :</b> Le terme <b>{reliable_kw['keyword']}</b> est corroboré par <b>{reliable_kw['source_count']} sources distinctes</b>. 
+        Un score élevé ici réduit le risque de faux positif lié au bruit d'une source unique.
+    </div>
+    """, unsafe_allow_html=True)
 
 # ── DEEP DIVE ─────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-header-centered">🔍 Explorer les Articles</div>', unsafe_allow_html=True)
