@@ -13,6 +13,11 @@ from db_connect import get_mart_k3, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="StatCyberMatrix - Intelligence Menaces", layout="wide")
 
+# Injection CSS pour la sidebar
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from sidebar_css import inject_sidebar_css
+inject_sidebar_css()
+
 # ── Styles CSS ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>

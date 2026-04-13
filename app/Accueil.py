@@ -17,10 +17,11 @@ from utils_lang import t
 
 st.set_page_config(page_title="StatCyberMatrix", layout="wide", initial_sidebar_state="expanded")
 
-# ── Sidebar CSS
-sys.path.insert(0, os.path.dirname(__file__))
+# Injection CSS pour la sidebar
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sidebar_css import inject_sidebar_css
 inject_sidebar_css()
+
 
 # ── CSS GLOBAL ──────────────────────────────────────────────────────────────
 st.markdown("""

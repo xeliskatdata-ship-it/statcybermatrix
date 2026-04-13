@@ -15,6 +15,11 @@ from db_connect import get_mart_k2, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="KPI 2 - Threat Keywords", layout="wide")
 
+# Injection CSS pour la sidebar
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from sidebar_css import inject_sidebar_css
+inject_sidebar_css()
+
 # ── CSS GLOBAL (Style KPI 3 + Ajustements Vert/Blanc/Rouge) ──────────────────
 st.markdown("""
 <style>

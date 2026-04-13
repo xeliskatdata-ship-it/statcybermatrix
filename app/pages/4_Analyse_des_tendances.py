@@ -13,6 +13,11 @@ from db_connect import get_mart_k4, get_stg_articles
 
 st.set_page_config(page_title="StatCyberMatrix - KPI 4 Tendances", layout="wide")
 
+# Injection CSS pour la sidebar
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from sidebar_css import inject_sidebar_css
+inject_sidebar_css()
+
 # ── CSS GLOBAL ───────────────────────────────────────────────────────────
 st.markdown("""
 <style>

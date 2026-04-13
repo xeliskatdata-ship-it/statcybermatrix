@@ -13,6 +13,11 @@ from db_connect import get_mart_k5, force_refresh
 
 st.set_page_config(page_title="StatCyberMatrix - KPI 5 Alertes", layout="wide")
 
+# Injection CSS pour la sidebar
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from sidebar_css import inject_sidebar_css
+inject_sidebar_css()
+
 # ── HELPER TITRE ──────────────────────────────────────────────────────────
 def _section_title(text: str, size: str = "1.4rem"):
     st.markdown(

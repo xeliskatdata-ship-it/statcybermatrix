@@ -11,6 +11,11 @@ from db_connect import get_mart_k6, force_refresh
 
 st.set_page_config(page_title="StatCyberMatrix - KPI 6 CVE", layout="wide")
 
+# Injection CSS pour la sidebar
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from sidebar_css import inject_sidebar_css
+inject_sidebar_css()
+
 # ── ANIMATION MATRIX (FORCÉE & NETTOYAGE ECG) ────────────────────────────────
 components.html("""
 <script>
