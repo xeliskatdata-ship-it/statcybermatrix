@@ -1,4 +1,4 @@
-# 4_kpi4_Analyse_Tendances.py -- Version CTI Expert (Sentinel Green) - Sans Emoji
+# 4_kpi4_Analyse_Tendances.py -- Version CTI Expert Sans Emoji - Fix KeyError
 
 import sys, os
 import streamlit as st
@@ -22,7 +22,6 @@ st.markdown("""
 html,body,[class*="css"]{font-family:'Roboto',sans-serif; color: #ffffff !important;}
 .stApp { background-color: #050a14 !important; }
 
-/* Forcer l'écriture blanche */
 [data-testid="stMarkdownContainer"] p, [data-testid="stMarkdownContainer"] h1, 
 [data-testid="stMarkdownContainer"] h2, [data-testid="stMarkdownContainer"] h3,
 .stSelectbox label, .stCheckbox p, .stTable td, .stTable th {
@@ -41,7 +40,6 @@ html,body,[class*="css"]{font-family:'Roboto',sans-serif; color: #ffffff !import
     margin:40px auto 20px; padding-bottom:8px;
 }
 
-/* Boite d'analyse avec alerte mise en évidence */
 .insight-box {
     background: rgba(5, 10, 20, 0.7);
     border: 1px solid rgba(50, 205, 50, 0.3);
@@ -64,7 +62,7 @@ html,body,[class*="css"]{font-family:'Roboto',sans-serif; color: #ffffff !import
 </style>
 """, unsafe_allow_html=True)
 
-# ── FOND ANIMÉ : SENTINEL CODE RAIN (Arrière-plan) ──────────────────────────
+# ── FOND ANIMÉ : SENTINEL CODE RAIN ──────────────────────────────────────────
 components.html("""
 <script>
 (function() {
@@ -155,14 +153,18 @@ if not data_trend.empty:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── SOURCES ET PREUVES ───────────────────────────────────────────────────
+    # ── SOURCES ET PREUVES (CORRECTION KEYERROR) ──────────────────────────────
     st.markdown(f"#### Identification des sources au {date_pic_str} ({target}) :")
     sources_pic = df_raw[(df_raw['published_date'] == raw_date_pic) & (df_raw['category'] == target)]
     
     if not sources_pic.empty:
+        # Vérification dynamique du nom de la colonne de lien
+        col_link = 'link' if 'link' in sources_pic.columns else 'url'
+        
         for _, row in sources_pic.iterrows():
+            href = row[col_link] if col_link in row else "#"
             st.markdown(f"""
-                <a href="{row['link']}" target="_blank" class="source-link">
+                <a href="{href}" target="_blank" class="source-link">
                     - {row['title']} (Source : {row.get('source_name', 'Information libre')})
                 </a>
             """, unsafe_allow_html=True)
