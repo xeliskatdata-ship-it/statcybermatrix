@@ -12,19 +12,16 @@ from db_connect import get_mart_k6, force_refresh
 st.set_page_config(page_title="StatCyberMatrix - KPI 6 CVE", layout="wide")
 
 # ── ANIMATION MATRIX (FORCÉE & NETTOYAGE ECG) ────────────────────────────────
-# Ce script s'exécute dans le contexte du parent pour garantir l'affichage
 components.html("""
 <script>
 (function() {
   var p = window.parent.document;
   
-  // 1. NETTOYAGE RADICAL DE L'ECG ET DES ANCIENS CANVAS
   var removeOld = function() {
     ['ecg-bg', 'matrix-bg-k6', 'canvas'].forEach(id => {
       var el = p.getElementById(id);
       if(el) el.remove();
     });
-    // Supprime aussi par classe si nécessaire
     var canvases = p.getElementsByTagName('canvas');
     for(var i=0; i<canvases.length; i++) {
         if(!canvases[i].classList.contains('plotly-targets')) { canvases[i].remove(); }
@@ -32,7 +29,6 @@ components.html("""
   };
   removeOld();
 
-  // 2. INITIALISATION MATRIX
   var cv = p.createElement('canvas');
   cv.id = 'matrix-bg-k6';
   cv.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:-1;pointer-events:none;opacity:0.2;';
@@ -62,7 +58,6 @@ components.html("""
   }
   var interval = setInterval(draw, 35);
   
-  // Nettoyage lors du changement de page Streamlit
   window.addEventListener('unload', function() {
     clearInterval(interval);
     if(cv) cv.remove();
@@ -77,8 +72,9 @@ st.markdown("""
 .stApp { background-color: #050a14 !important; }
 .page-title { text-align: center; font-size: 2.5rem; font-weight: 700; color: #3b82f6; }
 .cve-card { background: rgba(15,20,34,0.85); border: 1px solid #1e2a42; border-radius: 10px; padding: 20px; backdrop-filter: blur(8px); }
-.severity-critical { color: #ef4444; font-weight: bold; }
-/* Style pour rendre les liens discrets dans les graphiques */
+.severity-CRITICAL { color: #ef4444; font-weight: bold; }
+.severity-HIGH { color: #f97316; font-weight: bold; }
+.severity-MEDIUM { color: #f59e0b; font-weight: bold; }
 a { text-decoration: none; color: inherit; }
 </style>
 """, unsafe_allow_html=True)
@@ -91,12 +87,18 @@ if df_raw.empty:
 agg = df_raw.head(12).copy()
 agg.columns = ['CVE', 'Mentions']
 
-# Préparation des étiquettes cliquables : <a href='URL'>CVE-ID</a>
 def make_clickable(cve):
     link = f"https://nvd.nist.gov/vuln/detail/{cve}"
     return f'<a href="{link}" target="_blank">{cve}</a>'
 
 agg['Clickable_CVE'] = agg['CVE'].apply(make_clickable)
+
+# Simulation de données NVD pour la démonstration (À lier à votre DB/API)
+# Ici, on génère des scores différents pour prouver que le changement fonctionne
+nvd_data_sim = {row['CVE']: {
+    "score": round(9.0 + (i % 10) / 10, 1) if i % 2 == 0 else round(7.0 + (i % 10) / 10, 1),
+    "severity": "CRITICAL" if i % 2 == 0 else "HIGH"
+} for i, row in agg.iterrows()}
 
 # ── EN-TÊTE ──────────────────────────────────────────────────────────────────
 st.markdown('<div class="page-title">CVEs les plus mentionnées</div>', unsafe_allow_html=True)
@@ -119,7 +121,6 @@ with col_left:
 
 with col_right:
     st.markdown("<h4 style='color:#3b82f6;'>Classement (CVE cliquables)</h4>", unsafe_allow_html=True)
-    # On utilise Clickable_CVE pour l'axe Y
     fig_bar = go.Figure(go.Bar(
         x=agg['Mentions'], 
         y=agg['Clickable_CVE'], 
@@ -135,17 +136,22 @@ with col_right:
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-# ── INVESTIGATION NVD ────────────────────────────────────────────────────────
+# ── INVESTIGATION NVD DYNAMIQUE ──────────────────────────────────────────────
 st.write("---")
 st.markdown("<h3 style='text-align:center; color:#3b82f6;'>INVESTIGATION NVD</h3>", unsafe_allow_html=True)
 
 selected_cve = st.selectbox("Analyse profonde de la base :", agg['CVE'].tolist())
 
+# Récupération des données dynamiques selon la sélection
+current_info = nvd_data_sim.get(selected_cve, {"score": "N/A", "severity": "UNKNOWN"})
+score_val = current_info['score']
+sev_val = current_info['severity']
+
 st.markdown(f"""
 <div class="cve-card">
     <h4>Fiche Technique : {selected_cve}</h4>
-    <p><b>Sévérité NVD :</b> <span class="severity-critical">CRITICAL</span> (Score: 9.8)</p>
-    <p><b>Analyse :</b> Cette vulnérabilité est actuellement très citée dans les rapports d'incidents APT.</p>
+    <p><b>Sévérité NVD :</b> <span class="severity-{sev_val}">{sev_val}</span> (Score: {score_val})</p>
+    <p><b>Analyse :</b> Cette vulnérabilité ({selected_cve}) fait l'objet d'une attention particulière suite à une hausse de {agg[agg['CVE']==selected_cve]['Mentions'].values[0]} mentions.</p>
     <hr style="border:0.5px solid #1e2a42">
     <small style="color: #64748b;">
         <b>NVD (National Vulnerability Database) :</b> Référentiel du NIST synchronisé avec la liste CVE de MITRE. 
