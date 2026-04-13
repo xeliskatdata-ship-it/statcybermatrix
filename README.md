@@ -1,11 +1,10 @@
-# CyberPulse
+# StatCyberMatrix
 
 **Veille automatique & analyse NLP des actualités cyber**
 
-Dashboard de threat intelligence qui collecte, nettoie, classifie et géolocalise les menaces cyber en temps réel depuis 64 sources spécialisées.
+Dashboard de threat intelligence qui collecte, nettoie, classifie les articles cyber et géolocalise les menaces cyber en temps réel depuis 64 sources spécialisées.
 
 > Projet solo · Wild Code School · Data Analytics 2026  
-> Démo finale : 23 avril 2026
 
 ---
 
@@ -13,7 +12,7 @@ Dashboard de threat intelligence qui collecte, nettoie, classifie et géolocalis
 
 **Comment identifier rapidement les sujets émergents en cybersécurité et suivre leur évolution ?**
 
-CyberPulse automatise la veille structurée : collecte toutes les heures, classification en 13 catégories de menaces, géolocalisation du pays attaqué par NLP, et affichage sur un dashboard interactif.
+StatCyberMatrix automatise la veille structurée : collecte toutes les heures, classification en 13 catégories de menaces, géolocalisation du pays attaqué par NLP, et affichage sur un dashboard interactif.
 
 ---
 
@@ -23,12 +22,11 @@ CyberPulse automatise la veille structurée : collecte toutes les heures, classi
 |--------|--------|
 | Collecte | Python · Requests · feedparser · 3 APIs REST + 61 flux RSS |
 | Nettoyage | Pandas · 942 mots-clés · 13 catégories |
-| Base de données | PostgreSQL 15 · 3 couches (raw → stg → mart) |
-| Transformation | dbt (staging + 6 marts) |
-| Orchestration | Apache Airflow 2.8 · DAG 4 tâches · cron horaire |
-| Dashboard | Streamlit · Plotly · Leaflet.js |
+| Base de données | PostgreSQL (Neon) · 3 couches (raw → stg → mart) |
+| Transformation | SQL pur · vues chaînées (stg → 6 marts) |
+| Orchestration | GitHub Actions · cron horaire |
+| Dashboard | Streamlit Cloud · Plotly · Leaflet.js |
 | NLP | spaCy (en_core_web_sm + fr_core_news_sm) |
-| Conteneurisation | Docker Compose (3 services) |
 | i18n | FR/EN · deep-translator |
 
 ---
@@ -42,22 +40,32 @@ acquisition.py (3 APIs + 61 RSS)
 cleaning.py (942 keywords → 13 catégories)
       │
       ▼
-load_to_db.py → PostgreSQL raw_articles
+load_to_db.py → Neon PostgreSQL raw_articles
                       │
                       ▼
-              dbt run → stg_articles (classification regex)
+              stg_articles (vue · classification regex)
                       │
                       ▼
-                 mart_k1 ... mart_k6 (agrégation)
+                 mart_k1 ... mart_k6 (vues · agrégation)
                       │
                       ▼
-              Streamlit Dashboard (8 pages)
+              Streamlit Cloud Dashboard (8 pages)
 ```
 
-**Orchestration Airflow :**
+**Orchestration GitHub Actions :**
 ```
-t1_acquisition → t2_cleaning → t3_load_to_db → t4_dbt_run
+acquisition.py → cleaning.py → load_to_db.py → refresh_marts.py
 ```
+
+---
+
+## Déploiement cloud
+
+| Service | Plateforme | Rôle |
+|---------|-----------|------|
+| Base de données | Neon (eu-central-1) | PostgreSQL serverless |
+| Dashboard | Streamlit Cloud | Frontend interactif |
+| Pipeline | GitHub Actions | Collecte horaire automatisée |
 
 ---
 
@@ -83,18 +91,18 @@ t1_acquisition → t2_cleaning → t3_load_to_db → t4_dbt_run
 | # | Indicateur | Visualisation |
 |---|-----------|---------------|
 | K1 | Articles collectés par jour / source | Small multiples + heatmap |
-| K2 | Top mots-clés fréquents | Bar chart + heatmap catégorie×période + scatter interactif |
+| K2 | Top mots-clés fréquents | Lollipop chart horizontal + heatmap catégorie×période |
 | K3 | Répartition par type de menace | Donut / Treemap |
 | K4 | Évolution des mentions d'une menace | Courbe temporelle + filtre |
 | K5 | Alertes critiques par semaine | Barres + seuil d'alerte |
 | K6 | Top CVE les plus mentionnées | Tableau classé + histogramme |
-| K7 | Carte mondiale des menaces | Leaflet.js + géolocalisation NLP |
+| MAP | Carte mondiale des menaces | Leaflet.js + géolocalisation NLP |
 
 ---
 
 ## Classification des menaces
 
-**13 catégories · 942 mots-clés** (cleaning.py) + **regex SQL** (stg_articles.sql)
+**13 catégories · 942 mots-clés** (cleaning.py) + **regex SQL** (stg_articles)
 
 | Catégorie | Exemples de mots-clés |
 |-----------|----------------------|
@@ -106,11 +114,11 @@ t1_acquisition → t2_cleaning → t3_load_to_db → t4_dbt_run
 | data_breach | data breach, leak, exfiltration, dark web |
 | ddos | ddos, amplification, killnet, botnet attack |
 | supply_chain | npm, pypi, solarwinds, dependency confusion |
-| cryptography | — |
-| defense | — |
-| offensive | — |
-| compliance | — |
-| identity | — |
+| cryptography | chiffrement, tls, post-quantum, aes |
+| defense | siem, soc, edr, xdr, forensic |
+| offensive | pentest, red team, bug bounty, ctf |
+| compliance | nis2, dora, iso 27001, rgpd |
+| identity | mfa, zero trust, sso, iam |
 | general | filet de sécurité (17,9% des articles) |
 
 **Résultat :** catégorie "general" réduite de 54,8% à 17,9% grâce à un enrichissement en 2 passes.
@@ -136,104 +144,53 @@ Seuils : **forte** ≥ 70 | **moyenne** ≥ 45 | **faible** < 45
 
 ---
 
-## Installation
-
-### Prérequis
-
-- Docker & Docker Compose
-- Python 3.11+
-- Clés API dans `.env` 
-
-### Lancement
-
-```bash
-# Démarrer les 3 services (PostgreSQL + Airflow + Streamlit)
-docker compose up -d
-
-# Vérifier
-docker ps
-
-### Lancement manuel du pipeline
-
-```bash
-# Collecte
-python src/acquisition.py
-
-# Nettoyage
-python src/cleaning.py
-
-# Chargement en base
-python db/load_to_db.py
-
-# Transformation dbt
-docker exec -it cyberpulse_airflow bash -c "cd /opt/airflow/dbt && dbt run"
-```
-
----
-
 ## Arborescence
 
 ```
-cyberpulse/
+statcybermatrix/
 ├── src/
 │   ├── acquisition.py        # 3 APIs + 61 RSS = 64 sources
-│   ├── cleaning.py           # 13 catégories · 942 mots-clés
-│   ├── db_connect.py         # Connexion PostgreSQL · cache TTL 120s
-│   └── utils_lang.py         # i18n FR/EN · 95+ clés
+│   └── cleaning.py           # 13 catégories · 942 mots-clés
 │
 ├── app/
-│   ├── app.py                # Dashboard accueil + navigation KPI
+│   ├── Accueil.py            # Dashboard accueil + navigation KPI
+│   ├── db_connect.py         # Connexion PostgreSQL · cache TTL 120s
+│   ├── sidebar_css.py        # CSS sidebar · badges KPI + compteurs live
+│   ├── utils_lang.py         # i18n FR/EN · 95+ clés
 │   ├── carte_menaces.html    # Leaflet.js · marqueurs scintillants
+│   ├── static/
+│   │   ├── logo_statcybermatrix.png
+│   │   └── statcybermatrix_sidebar.png
 │   └── pages/
-│       ├── 1_kpi1_Articles.py
-│       ├── 2_kpi2_Mots_cles.py
-│       ├── 3_KPI3_Menaces.py
-│       ├── 4_KPI4_Tendances.py
-│       ├── 5_KPI5_Alertes.py
-│       ├── 6_KPI6_CVE.py
+│       ├── 1_Articles_collectes.py
+│       ├── 2_Suivi_des_mots-cles.py
+│       ├── 3_Analyse_des_menaces.py
+│       ├── 4_Analyse_des_tendances.py
+│       ├── 5_Analyse_des_alertes.py
+│       ├── 6_CVEs.py
 │       └── 7_Carte_Menaces.py
 │
 ├── db/
-│   ├── schema.sql            # Tables raw / stg / mart
-│   └── load_to_db.py         # INSERT ON CONFLICT · WHERE NOT EXISTS
+│   └── load_to_db.py         # INSERT WHERE NOT EXISTS · dedup 3 couches
 │
-├── dbt/
-│   ├── profiles.yml
-│   └── models/
-│       ├── staging/
-│       │   └── stg_articles.sql   # Classification 13 catégories · CTE
-│       └── mart/
-│           ├── mart_k1.sql ... mart_k6.sql
+├── .github/
+│   └── workflows/
+│       └── pipeline.yml      # GitHub Actions · cron horaire
 │
-├── pipelines/
-│   └── dag_cyberpulse.py     # DAG Airflow · 4 tâches · cron horaire
-│
-├── docker-compose.yml        # PostgreSQL + Airflow + Streamlit
-├── .env                      # Clés API + credentials PostgreSQL
 └── README.md
 ```
 
 ---
 
-## Architecture Docker
-
-| Service | Image | Port | Rôle |
-|---------|-------|------|------|
-| postgres | postgres:15 | 5432 | Base de données |
-| streamlit | python:3.11-slim | 8501 | Dashboard |
-| airflow | apache/airflow:2.8.0 | 8080 | Orchestration pipeline |
-
----
-
-## Architecture dbt
+## Architecture SQL (Neon)
 
 ```
-raw_articles (table PostgreSQL)
-  → stg_articles (view · classification 13 catégories par regex)
-    → mart_k1 ... mart_k6 (tables · agrégation uniquement)
+raw_articles (table)
+  → stg_articles (vue · classification 13 catégories par regex)
+    → mart_k1 ... mart_k6 (vues · agrégation auto-refresh)
 ```
 
-**Principe DRY** : la classification est uniquement dans `stg_articles.sql`. Les marts ne font que l'agrégation.
+**Principe DRY** : la classification est uniquement dans `stg_articles`. Les marts ne font que l'agrégation. Toutes les couches sont des vues — les données se rafraîchissent automatiquement à chaque nouvelle collecte.
 
 ---
 
@@ -241,9 +198,9 @@ raw_articles (table PostgreSQL)
 
 | Limite | Description |
 |--------|------------|
-| Attaquant vs victime | La géoloc peut confondre le pays attaquant et le pays attaqué (ex: "Russia's Forest Blizzard" → Russie détectée comme victime). Le score faible alerte sur ces cas. |
+| Attaquant vs victime | La géoloc peut confondre le pays attaquant et le pays attaqué. Le score faible alerte sur ces cas. |
 | Une catégorie par article | Un article multi-menaces est forcé dans une seule catégorie (premier match) |
-| Deux systèmes de classification | cleaning.py (942 keywords) et stg_articles.sql (regex dbt) coexistent — le dashboard lit dbt |
+| Déduplication URL | Le pipeline rejette les articles dont l'URL existe déjà — les flux RSS renvoyant les mêmes URLs ne génèrent pas de doublons mais empêchent la mise à jour d'articles modifiés |
 
 ---
 
@@ -253,4 +210,4 @@ raw_articles (table PostgreSQL)
 
 ---
 
-*Dernière mise à jour : 10 avril 2026*
+*Dernière mise à jour : 13 avril 2026*
