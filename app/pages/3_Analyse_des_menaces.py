@@ -16,7 +16,7 @@ st.set_page_config(page_title="StatCyberMatrix - Intelligence Menaces", layout="
 # ── Styles CSS ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Roboto:wght@300;400;700&display=swap');
 .stApp { background-color: #050a14 !important; }
 .page-title { text-align: center; font-size: 2.5rem; font-weight: 700; color: #3b82f6; text-shadow: 0 0 15px rgba(59,130,246,0.3); }
 .section-title { font-family:'Roboto Mono',monospace; font-size:1.1rem; color:#3b82f6; margin-top:30px; border-left:4px solid #3b82f6; padding-left:15px; text-transform:uppercase; margin-bottom:20px;}
@@ -78,15 +78,34 @@ col1, col2 = st.columns([2, 1])
 
 with col1:
     st.markdown('<div class="section-title">Dominance par Secteur (Treemap)</div>', unsafe_allow_html=True)
-    fig_tree = px.treemap(
-        df, 
-        path=[px.Constant("Menaces"), 'category', 'source'], 
-        values='nb_articles',
-        color='nb_articles',
-        color_continuous_scale='Blues'
-    )
-    fig_tree.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", margin=dict(t=0, l=0, r=0, b=0))
-    st.plotly_chart(fig_tree, use_container_width=True)
+    if not df.empty:
+        fig_tree = px.treemap(
+            df, 
+            path=[px.Constant("Menaces"), 'category', 'source'], 
+            values='nb_articles',
+            color='nb_articles',
+            color_continuous_scale='Blues'
+        )
+        
+        # Optimisation de la lecture du Treemap
+        fig_tree.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)', 
+            font_color="white", 
+            margin=dict(t=0, l=0, r=0, b=0),
+            hoverlabel=dict(
+                bgcolor="rgba(13, 25, 48, 0.9)", # Bleu très foncé transparent
+                font_size=13,
+                font_family="Roboto Mono",
+                bordercolor="#3b82f6"
+            )
+        )
+        # Épuration du texte affiché
+        fig_tree.update_traces(
+            textinfo="label+value",
+            hovertemplate="<b>%{label}</b><br>Articles: %{value}<extra></extra>"
+        )
+        st.plotly_chart(fig_tree, use_container_width=True)
 
 with col2:
     st.markdown('<div class="section-title">Résumé Analyste</div>', unsafe_allow_html=True)
@@ -107,7 +126,13 @@ with col2:
             fill='toself',
             line_color='#3b82f6'
         ))
-        fig_radar.update_layout(polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False)), showlegend=False, paper_bgcolor='rgba(0,0,0,0)', height=300, margin=dict(t=30, b=30))
+        fig_radar.update_layout(
+            polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False)), 
+            showlegend=False, 
+            paper_bgcolor='rgba(0,0,0,0)', 
+            height=300, 
+            margin=dict(t=30, b=30)
+        )
         st.plotly_chart(fig_radar, use_container_width=True)
 
 # ── MATRICE DE CORRÉLATION AGRANDIE ─────────────────────────────────────────
@@ -118,44 +143,43 @@ if not df.empty:
     
     # --- Analyse Dynamique de la Matrice ---
     max_val = pivot.values.max()
-    # Trouver la cellule max (source, catégorie)
     max_pos = (pivot == max_val).stack().idxmax()
     source_max, cat_max = max_pos
     
+    # Suppression de l'emoji loupe
     st.markdown(f"""
     <div class="matrix-analysis">
-        🔍 <b>Analyse de couverture :</b> Actuellement, la source <b>{source_max}</b> est le principal émetteur d'alertes 
+        <b>Analyse de couverture :</b> Actuellement, la source <b>{source_max}</b> est le principal émetteur d'alertes 
         sur le vecteur <b>{cat_max}</b> ({int(max_val)} articles). 
         <i>Cette matrice permet d'identifier les zones d'ombre ou les sur-représentations de certains flux.</i>
     </div>
     """, unsafe_allow_html=True)
 
-    # Création de la Heatmap agrandie
     fig_heat = px.imshow(
         pivot,
         labels=dict(x="Catégories de Menaces", y="Sources de Veille", color="Volume"),
         color_continuous_scale='Blues',
-        aspect="auto" # Permet de mieux remplir l'espace
+        aspect="auto" 
     )
     
     fig_heat.update_layout(
-        height=600, # Hauteur augmentée pour la lisibilité
+        height=600, 
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         font=dict(family='Roboto Mono', color="#94a3b8", size=12),
-        xaxis=dict(side="top"), # Met les catégories en haut pour faciliter la lecture
+        xaxis=dict(side="top"), 
         margin=dict(t=100, b=50, l=50, r=50)
     )
     
-    # Ajout du texte de valeur dans chaque case (facultatif, seulement si les cases sont assez grandes)
-    if len(pivot.index) < 20: 
+    if len(pivot.index) < 25: 
         fig_heat.update_traces(text=pivot.values, texttemplate="%{text}")
 
     st.plotly_chart(fig_heat, use_container_width=True)
 
 # ── Deep Dive ───────────────────────────────────────────────────────────────
 st.markdown('<div class="section-title">Deep Dive : Derniers indicateurs</div>', unsafe_allow_html=True)
-selected_cat = st.selectbox("Filtrer par vecteur", df['category'].unique() if not df.empty else ["N/A"])
+unique_cats = df['category'].unique() if not df.empty else ["N/A"]
+selected_cat = st.selectbox("Filtrer par vecteur", unique_cats)
 
 df_raw_articles = get_stg_articles(limit=200)
 filtered_articles = df_raw_articles[df_raw_articles['title'].str.contains(selected_cat, case=False, na=False)].head(10)
