@@ -139,7 +139,6 @@ with st.sidebar:
     choix_temps = st.selectbox("Fenetre d'observation", ["7 derniers jours", "14 derniers jours", "30 derniers jours"], index=1)
     nb_jours = int(choix_temps.split()[0])
     
-    # Intégration de l'option "Tout"
     cats_brutes = sorted(df_mart['category'].unique().tolist()) if not df_mart.empty else []
     cats_dispo = ["Tout"] + cats_brutes
     target = st.selectbox("Vecteur cible", cats_dispo)
@@ -153,7 +152,6 @@ if not df_mart.empty:
     # ── GRAPHIQUE Z-SCORE ────────────────────────────────────────────────────
     st.markdown(f'<div class="section-title">Indice d\'Accélération (Z-Score) - {target}</div>', unsafe_allow_html=True)
     
-    # Filtrage logique : si "Tout", on groupe par date sans filtrer la catégorie
     if target == "Tout":
         data_trend = df_filtered.groupby('published_date')['nb_mentions'].sum().reset_index()
     else:
@@ -180,14 +178,18 @@ if not df_mart.empty:
         # ── BLOC ANALYSE ─────────────────────────────────────────────────────
         status = "CRITIQUE" if top_emergence['z_score'] > 2 else "STABLE"
         color_status = "#ff4b4b" if top_emergence['z_score'] > 2 else "#32CD32"
-        
         target_display = "tous vecteurs confondus" if target == "Tout" else f"la catégorie <b>{target}</b>"
+
+        # Gestion dynamique du pluriel selon vol_pic
+        verbe_aux = "ont été" if vol_pic > 1 else "a été"
+        participe_acc = "identifiées" if vol_pic > 1 else "identifiée"
+        mot_mention = "mentions" if vol_pic > 1 else "mention"
 
         st.markdown(f"""
         <div class="insight-box">
             <b>Etat du signal :</b> <span style="color:{color_status}; font-weight:bold;">{status}</span> (Score Z : {top_emergence['z_score']:.2f})
             <div class="alert-highlight">
-                <b>DETAIL DE L'ALERTE :</b> Le <b>{date_pic_str}</b>, un volume de <b>{vol_pic} mentions</b> a ete identifie. 
+                <b>DETAIL DE L'ALERTE :</b> Le <b>{date_pic_str}</b>, un volume de <b>{vol_pic} {mot_mention}</b> {verbe_aux} {participe_acc}. 
                 Cela représente un bond de <b>{bond_percent:.1f}%</b> par rapport a l'activite habituelle pour {target_display}.
             </div>
         </div>
@@ -224,7 +226,6 @@ if not df_mart.empty:
             df_articles = get_stg_articles(limit=2000)
             df_articles['published_date'] = pd.to_datetime(df_articles['published_date']).dt.normalize()
             
-            # Filtrage des sources pour la date du pic
             if target == "Tout":
                 sources_pic = df_articles[df_articles['published_date'] == raw_date_pic]
             else:
