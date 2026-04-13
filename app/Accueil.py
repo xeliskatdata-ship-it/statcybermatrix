@@ -160,7 +160,21 @@ body {{ background:transparent; font-family:'Roboto',sans-serif; margin:0; }}
 
 # ── TABLEAU RÉCENT ────────────────────────────────────────────────────────────
 if not df_articles.empty:
-    st.dataframe(df_articles[["source", "title", "published_date"]].head(10), use_container_width=True, hide_index=True)
+    # Traitement de la date : conversion en datetime puis formatage YYYY-MM-DD
+    df_articles['published_date'] = pd.to_datetime(df_articles['published_date']).dt.strftime('%Y-%m-%d')
+    
+    # Affichage avec réduction de la colonne date
+    st.dataframe(
+        df_articles[["source", "title", "published_date"]].head(10), 
+        use_container_width=True, 
+        hide_index=True,
+        column_config={
+            "published_date": st.column_config.TextColumn(
+                "Date",
+                width="small"
+            )
+        }
+    )
 
 # ── SECTION KPI 1 À 6 ─────────────────────────────────────────────────────────
 st.markdown("<br><br>", unsafe_allow_html=True)
