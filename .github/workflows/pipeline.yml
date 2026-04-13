@@ -1,4 +1,4 @@
-name: CyberPulse Pipeline
+name: StatCyberMatrix Pipeline
 
 on:
   schedule:
