@@ -62,7 +62,7 @@ html,body,[class*="css"]{font-family:'Roboto',sans-serif; color: #ffffff !import
 .custom-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 10px 0 25px;
+    margin: 20px 0 10px;
     font-family: 'Roboto Mono', monospace;
     background-color: rgba(15, 20, 34, 0.8);
     border-radius: 10px;
@@ -170,10 +170,11 @@ if not df_mart.empty and target:
         fig_radar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(15,20,34,0.6)', font=dict(color='#ffffff'))
         st.plotly_chart(fig_radar, use_container_width=True)
 
-        # ── BLOC ANALYSE & TABLEAU DESIGN ────────────────────────────────────
+        # ── BLOC ANALYSE ─────────────────────────────────────────────────────
         status = "CRITIQUE" if top_emergence['z_score'] > 2 else "STABLE"
         color_status = "#ff4b4b" if top_emergence['z_score'] > 2 else "#32CD32"
         
+        # 1. On affiche le début du bloc
         st.markdown(f"""
         <div class="insight-box">
             <b>Etat du signal :</b> <span style="color:{color_status}; font-weight:bold;">{status}</span> (Score Z : {top_emergence['z_score']:.2f})
@@ -181,31 +182,33 @@ if not df_mart.empty and target:
                 <b>DETAIL DE L'ALERTE :</b> Le <b>{date_pic_str}</b>, un volume de <b>{vol_pic} mentions</b> a ete identifie. 
                 Cela représente un bond de <b>{bond_percent:.1f}%</b> par rapport a l'activite habituelle de la categorie <b>{target}</b>.
             </div>
-            
-            <br>
-            <table class="custom-table">
-                <thead>
-                    <tr>
-                        <th>Valeur Z-Score</th>
-                        <th>Signification pour le Consultant</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><b>0</b></td>
-                        <td><span class="status-ok">Activité normale</span> (calme plat)</td>
-                    </tr>
-                    <tr>
-                        <td><b>1 à 2</b></td>
-                        <td><span class="status-warn">Vigilance</span> : bruit de fond en légère augmentation</td>
-                    </tr>
-                    <tr>
-                        <td><b>> 2</b></td>
-                        <td><span class="status-crit">ANOMALIE</span> : Signal fort d'une attaque critique</td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
+        """, unsafe_allow_html=True)
+
+        # 2. tableau explicatif
+        st.markdown("""
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Valeur Z-Score</th>
+                    <th>Signification pour le Consultant</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><b>0</b></td>
+                    <td><span class="status-ok">Activité normale</span> (calme plat)</td>
+                </tr>
+                <tr>
+                    <td><b>1 à 2</b></td>
+                    <td><span class="status-warn">Vigilance</span> : bruit de fond en légère augmentation</td>
+                </tr>
+                <tr>
+                    <td><b>> 2</b></td>
+                    <td><span class="status-crit">ANOMALIE</span> : Signal fort d'une attaque critique</td>
+                </tr>
+            </tbody>
+        </table>
         """, unsafe_allow_html=True)
 
         # ── SOURCES ──────────────────────────────────────────────────────────
