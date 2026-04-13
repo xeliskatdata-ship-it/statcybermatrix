@@ -1,4 +1,4 @@
-# 2_kpi2_Mots_cles.py -- Version Design Harmonisée avec KPI 1
+# 2_kpi2_Mots_cles.py -- Version Optimisée : Treemap Riche et Hover Nettoyé
 
 import os
 import sys
@@ -15,14 +15,12 @@ from db_connect import get_mart_k2, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="KPI 2 - Threat Keywords", layout="wide")
 
-# ── CSS GLOBAL (Identique KPI 1 pour centrage et style) ───────────────────────
+# ── CSS GLOBAL (Centrage et Cartes Articles) ──────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Roboto+Mono:wght@400;700&display=swap');
 .stApp { background-color: #050a14 !important; color: #94a3b8; }
-/* Titre principal centré */
 .page-title { text-align:center; font-size:2.8rem; font-weight:700; color:#a855f7; margin-bottom:20px; line-height:1.2; }
-/* Titres de sections centrés avec barre violette */
 .section-header-centered {
     text-align:center; font-family:'Roboto Mono',monospace; font-size:1.2rem;
     letter-spacing:.1em; text-transform:uppercase; color:#a855f7;
@@ -32,7 +30,6 @@ st.markdown("""
 .metric-container { background: rgba(15,20,34,0.6); border: 1px solid rgba(168,85,247,0.2); border-radius: 8px; padding: 20px; text-align: center; backdrop-filter: blur(10px); }
 .metric-label { font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; }
 .metric-value { font-family: 'Roboto Mono'; font-size: 2.2rem; font-weight: 700; color: #e2e8f0; }
-/* Cartes articles */
 .article-card { background: rgba(15,20,34,0.8); border: 1px solid #1e2a42; border-radius: 6px; padding: 12px 16px; margin-bottom: 8px; backdrop-filter: blur(6px); transition: 0.2s; }
 .article-card:hover { border-color: #a855f7; background: rgba(20,28,48,0.9); }
 .article-link { color: #e2e8f0; text-decoration: none; font-size: 0.95rem; font-weight: 500; }
@@ -102,7 +99,7 @@ with col4:
     if st.button("⟳ Refresh Data", use_container_width=True):
         force_refresh(); st.rerun()
 
-# ── TREEMAP CENTRÉ & NETTOYÉ ──────────────────────────────────────────────────
+# ── TREEMAP RICHE & CENTRÉ ────────────────────────────────────────────────────
 st.markdown('<div class="section-header-centered">Analyse Hiérarchique</div>', unsafe_allow_html=True)
 
 _, f_col, _ = st.columns([1, 2, 1])
@@ -111,22 +108,32 @@ with f_col:
 
 df_filtered = drift_df[drift_df['acceleration'] >= min_accel]
 
+# On crée une colonne de texte personnalisée pour l'affichage statique dans les cases
+df_filtered['display_text'] = df_filtered.apply(
+    lambda x: f"<b>{x['keyword']}</b><br>{int(x['occurrences'])} articles<br>{x['acceleration']:.2f}x", axis=1
+)
+
 fig_tree = px.treemap(
     df_filtered,
     path=[px.Constant("Global Overview"), 'category', 'keyword'],
     values='occurrences',
     color='acceleration',
     color_continuous_scale='Purples',
-    range_color=[0.5, 2.5]
+    range_color=[0.5, 2.5],
+    custom_data=['keyword', 'occurrences', 'acceleration']
 )
+
+# Configuration pour remplir le vide : on affiche le label + la valeur
 fig_tree.update_traces(
-    hovertemplate="<b>Menace : %{label}</b><br>Volume : %{value} articles<br>Accélération : %{color:.2f}x<extra></extra>",
-    textinfo="label+value"
+    textinfo="label+value",
+    hovertemplate="<b>Menace : %{customdata[0]}</b><br>Volume : %{customdata[1]} articles<br>Accélération : %{customdata[2]:.2f}x<extra></extra>",
+    textfont=dict(size=14, family="Roboto Mono")
 )
+
 fig_tree.update_layout(margin=dict(t=0, b=0, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 st.plotly_chart(fig_tree, use_container_width=True)
 
-# ── GRAPHIQUE BARRES NETTOYÉ ──────────────────────────────────────────────────
+# ── GRAPHIQUE FIABILITÉ DU SIGNAL (HOVER NETTOYÉ) ──────────────────────────────
 st.markdown('<div class="section-header-centered">Fiabilité du Signal</div>', unsafe_allow_html=True)
 
 df_snr = df_filtered.nlargest(15, 'occurrences').sort_values('source_count')
@@ -134,9 +141,9 @@ fig_snr = go.Figure(go.Bar(
     y=df_snr['keyword'], x=df_snr['source_count'],
     orientation='h',
     marker=dict(color='#a855f7', line=dict(color='#f0abfc', width=1)),
-    # SURVOL NETTOYÉ ICI
     hovertemplate="<b>%{y}</b><br>Sources uniques : %{x}<extra></extra>"
 ))
+
 fig_snr.update_layout(
     paper_bgcolor="rgba(0,0,0,0)", 
     plot_bgcolor="rgba(15,20,34,0.4)", 
