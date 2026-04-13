@@ -1,4 +1,4 @@
-# 2_kpi2_Mots_cles.py -- Version Finale avec Treemap Nettoyé et Liens cliquables
+# 2_kpi2_Mots_cles.py -- Version Design Harmonisée avec KPI 1
 
 import os
 import sys
@@ -15,17 +15,24 @@ from db_connect import get_mart_k2, get_stg_articles, force_refresh
 
 st.set_page_config(page_title="KPI 2 - Threat Keywords", layout="wide")
 
-# ── CSS GLOBAL (Harmonisation KPI 1) ──────────────────────────────────────────
+# ── CSS GLOBAL (Identique KPI 1 pour centrage et style) ───────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Roboto+Mono:wght@400;700&display=swap');
 .stApp { background-color: #050a14 !important; color: #94a3b8; }
-.page-title { text-align:center; font-size:2.5rem; font-weight:700; color:#a855f7; margin-bottom:10px; }
-.section-title { font-family:'Roboto Mono'; font-size:0.8rem; color:#a855f7; border-left:4px solid #a855f7; padding-left:15px; margin:30px 0 20px; text-transform:uppercase; letter-spacing:0.1em; }
+/* Titre principal centré */
+.page-title { text-align:center; font-size:2.8rem; font-weight:700; color:#a855f7; margin-bottom:20px; line-height:1.2; }
+/* Titres de sections centrés avec barre violette */
+.section-header-centered {
+    text-align:center; font-family:'Roboto Mono',monospace; font-size:1.2rem;
+    letter-spacing:.1em; text-transform:uppercase; color:#a855f7;
+    border-bottom:1px solid rgba(168,85,247,0.3); width:fit-content;
+    margin:40px auto 20px; padding-bottom:8px;
+}
 .metric-container { background: rgba(15,20,34,0.6); border: 1px solid rgba(168,85,247,0.2); border-radius: 8px; padding: 20px; text-align: center; backdrop-filter: blur(10px); }
 .metric-label { font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 5px; }
 .metric-value { font-family: 'Roboto Mono'; font-size: 2.2rem; font-weight: 700; color: #e2e8f0; }
-/* Style des liens d'articles cliquables */
+/* Cartes articles */
 .article-card { background: rgba(15,20,34,0.8); border: 1px solid #1e2a42; border-radius: 6px; padding: 12px 16px; margin-bottom: 8px; backdrop-filter: blur(6px); transition: 0.2s; }
 .article-card:hover { border-color: #a855f7; background: rgba(20,28,48,0.9); }
 .article-link { color: #e2e8f0; text-decoration: none; font-size: 0.95rem; font-weight: 500; }
@@ -33,12 +40,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── FOND ANIMÉ ECG DISCRET ────────────────────────────────────────────────────
+# ── ANIMATION ECG (Style KPI 1) ───────────────────────────────────────────────
 components.html("""
 <script>
 (function() {
   var p = window.parent.document, w = window.parent;
-  var PT_SIZE=20, TRAIL_PX=270, SPD=2.5;
+  var PT_SIZE=24, TRAIL_PX=270, SPD=2.5;
   function ecgValue(x,H){var margin=PT_SIZE+10,maxAmp=H/2-margin,mod=x%220,raw;
     if(mod<70)raw=Math.sin(mod*0.05)*5;else if(mod<80)raw=(mod-70)*13;
     else if(mod<85)raw=130-(mod-80)*55;else if(mod<90)raw=-145+(mod-85)*32;
@@ -59,7 +66,7 @@ components.html("""
         var alpha=(k/history.length)*0.6, isSpike=Math.abs(history[k].y-H/2)>H*0.08;
         ctx.beginPath(); ctx.moveTo(history[k-1].x,history[k-1].y); ctx.lineTo(history[k].x,history[k].y);
         ctx.strokeStyle=isSpike?'rgba(168,85,247,'+alpha+')':'rgba(59,130,246,'+(alpha*0.3)+')';
-        ctx.lineWidth=isSpike?2.5:1.2; ctx.stroke();}
+        ctx.lineWidth=isSpike?3:1.5; ctx.stroke();}
       }
       requestAnimationFrame(draw);} draw(); return function(){alive=false;};}
   var stop=startECG();
@@ -79,7 +86,7 @@ try:
 except Exception as e:
     st.error(f"Erreur data : {e}"); st.stop()
 
-# ── EN-TÊTE ───────────────────────────────────────────────────────────────────
+# ── EN-TÊTE CENTRÉ ────────────────────────────────────────────────────────────
 st.markdown('<div class="page-title">Threat Keywords Intelligence</div>', unsafe_allow_html=True)
 
 col1, col2, col3, col4 = st.columns(4)
@@ -95,72 +102,77 @@ with col4:
     if st.button("⟳ Refresh Data", use_container_width=True):
         force_refresh(); st.rerun()
 
-# ── TREEMAP NETTOYÉ ───────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">Analyse Hiérarchique (Survol pour détails)</div>', unsafe_allow_html=True)
+# ── TREEMAP CENTRÉ & NETTOYÉ ──────────────────────────────────────────────────
+st.markdown('<div class="section-header-centered">Analyse Hiérarchique</div>', unsafe_allow_html=True)
 
-min_accel = st.slider("Seuil d'émergence (Indice d'accélération)", 0.5, 3.0, 1.0, step=0.1)
+_, f_col, _ = st.columns([1, 2, 1])
+with f_col:
+    min_accel = st.slider("Seuil d'émergence (Indice d'accélération)", 0.5, 3.0, 1.0, step=0.1)
+
 df_filtered = drift_df[drift_df['acceleration'] >= min_accel]
 
 fig_tree = px.treemap(
     df_filtered,
-    path=[px.Constant("Cyber Threats"), 'category', 'keyword'],
+    path=[px.Constant("Global Overview"), 'category', 'keyword'],
     values='occurrences',
     color='acceleration',
     color_continuous_scale='Purples',
     range_color=[0.5, 2.5]
 )
-
-# NETTOYAGE DU SURVOL (Hover)
 fig_tree.update_traces(
     hovertemplate="<b>Menace : %{label}</b><br>Volume : %{value} articles<br>Accélération : %{color:.2f}x<extra></extra>",
     textinfo="label+value"
 )
-fig_tree.update_layout(margin=dict(t=10, b=10, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+fig_tree.update_layout(margin=dict(t=0, b=0, l=10, r=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 st.plotly_chart(fig_tree, use_container_width=True)
 
-# ── GRAPHIQUE FIABILITÉ DU SIGNAL ─────────────────────────────────────────────
-st.markdown('<div class="section-title">Fiabilité du Signal (Nombre de Sources)</div>', unsafe_allow_html=True)
+# ── GRAPHIQUE BARRES NETTOYÉ ──────────────────────────────────────────────────
+st.markdown('<div class="section-header-centered">Fiabilité du Signal</div>', unsafe_allow_html=True)
 
 df_snr = df_filtered.nlargest(15, 'occurrences').sort_values('source_count')
 fig_snr = go.Figure(go.Bar(
     y=df_snr['keyword'], x=df_snr['source_count'],
     orientation='h',
     marker=dict(color='#a855f7', line=dict(color='#f0abfc', width=1)),
+    # SURVOL NETTOYÉ ICI
     hovertemplate="<b>%{y}</b><br>Sources uniques : %{x}<extra></extra>"
 ))
-fig_snr.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(15,20,34,0.4)", font=dict(family="Roboto Mono", color="#94a3b8"))
+fig_snr.update_layout(
+    paper_bgcolor="rgba(0,0,0,0)", 
+    plot_bgcolor="rgba(15,20,34,0.4)", 
+    height=450,
+    margin=dict(t=20, b=20),
+    xaxis=dict(title="Nombre de sources distinctes", gridcolor="rgba(255,255,255,0.05)"),
+    yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+    font=dict(family="Roboto Mono", color="#94a3b8")
+)
 st.plotly_chart(fig_snr, use_container_width=True)
 
-# ── DEEP DIVE : ARTICLES RÉELS (LIENS CLIQUABLES) ──────────────────────────────
-st.markdown('<div class="section-title">🔍 Deep Dive : Articles Relatés</div>', unsafe_allow_html=True)
+# ── DEEP DIVE CENTRÉ ──────────────────────────────────────────────────────────
+st.markdown('<div class="section-header-centered">🔍 Deep Dive : Articles Relatés</div>', unsafe_allow_html=True)
 
-selected_kw = st.selectbox("Sélectionner un mot-clé pour voir les articles", ["-- Choisir un mot-clé --"] + sorted(list(df_filtered['keyword'])))
+_, d_col, _ = st.columns([1, 2, 1])
+with d_col:
+    selected_kw = st.selectbox("Sélectionner une menace pour extraire les articles", ["-- Choisir un mot-clé --"] + sorted(list(df_filtered['keyword'])))
 
 if selected_kw != "-- Choisir un mot-clé --":
     try:
-        # On charge les vrais articles (comme dans KPI 1)
         all_articles = get_stg_articles(limit=2000)
         mask = all_articles['title'].str.contains(selected_kw, case=False, na=False)
         relevant = all_articles[mask].sort_values('published_date', ascending=False).head(10)
         
         if not relevant.empty:
             for _, row in relevant.iterrows():
-                titre = row['title']
-                url = row['url']
-                source = row['source']
-                date = str(row['published_date'])[:10]
-                
-                # HTML identique au design du KPI 1 pour la cohérence
                 st.markdown(f"""
                 <div class="article-card">
-                    <div><a href="{url}" target="_blank" class="article-link">{titre}</a></div>
+                    <div><a href="{row['url']}" target="_blank" class="article-link">{row['title']}</a></div>
                     <div class="article-meta">
-                        {date} &nbsp;·&nbsp; 
-                        <span style="background:rgba(168,85,247,0.15); color:#d8b4fe; border-radius:4px; padding:1px 8px;">{source}</span>
+                        {str(row['published_date'])[:10]} &nbsp;·&nbsp; 
+                        <span style="background:rgba(168,85,247,0.15); color:#d8b4fe; border-radius:4px; padding:1px 8px;">{row['source']}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
         else:
-            st.warning(f"Aucun article trouvé pour '{selected_kw}' dans les données récentes.")
+            st.warning(f"Aucun article trouvé pour '{selected_kw}'.")
     except Exception as e:
-        st.error(f"Erreur lors de l'extraction des articles : {e}")
+        st.error(f"Erreur extraction : {e}")
