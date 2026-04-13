@@ -232,7 +232,7 @@ if not df_snr.empty:
     """, unsafe_allow_html=True)
 
 # ── DEEP DIVE ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="section-header-centered">🔍 Explorer les Articles</div>', unsafe_allow_html=True)
+st.markdown('<div class="section-header-centered">Explorer les Articles</div>', unsafe_allow_html=True)
 _, d_col, _ = st.columns([1, 2, 1])
 with d_col:
     selected_kw = st.selectbox("Filtrer par mot-clé", ["-- Choisir --"] + sorted(list(df_filtered['keyword'])))
