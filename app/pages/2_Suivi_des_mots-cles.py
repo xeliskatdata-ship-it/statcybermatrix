@@ -57,6 +57,9 @@ div[role="slider"] { background-color: #ff0000 !important; border: 2px solid #ff
 </style>
 """, unsafe_allow_html=True)
 
+# ── TITRE DE LA PAGE RÉTABLI ─────────────────────────────────────────────────
+st.markdown('<div class="page-title">Suivi des mots-clés</div>', unsafe_allow_html=True)
+
 # ── FOND ANIMÉ : SENTINEL CODE RAIN (Structure technique KPI 3) ──────────────
 components.html("""
 <script>
@@ -70,7 +73,6 @@ components.html("""
 
     var cv = p.createElement('canvas');
     cv.id = 'sentinel-rain-bg-k2';
-    // Le z-index: 0 et le position: fixed assurent qu'il reste derrière le contenu Streamlit
     cv.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;opacity:0.12;';
     p.body.appendChild(cv);
 
@@ -108,7 +110,6 @@ components.html("""
   }
 
   startCodeRain();
-  // Relance si changement de page (propre à Streamlit)
   setInterval(function() {
     if (!p.getElementById('sentinel-rain-bg-k2')) startCodeRain();
   }, 2000);
