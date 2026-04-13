@@ -2,49 +2,76 @@ import streamlit as st
 import streamlit.components.v1 as components
 import json
 import os
+import pandas as pd
 
-# Titre de la page
+# --- CONFIGURATION DE LA PAGE ---
+st.set_page_config(layout="wide", page_title="StatCyberMatrix | Radar de Menaces")
+
+# --- TITRE ---
 st.title("🛰️ Radar de Menaces Cyber")
 
-def charger_carte():
-    # 1. LOCALISATION DU FICHIER (Adapté pour Streamlit Cloud)
-    # On cherche le fichier dans le même dossier que ce script
+def charger_et_afficher_carte():
+    # 1. RÉCUPÉRATION DU CHEMIN DU FICHIER HTML
+    # Ton image montre : pages/7_Carte_Menaces.py et carte_menaces.html à la racine (/app)
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    html_path = os.path.join(current_dir, "carte_menace.html")
+    # On remonte d'un dossier pour atteindre le HTML
+    html_path = os.path.join(current_dir, "..", "carte_menaces.html")
 
-    # 2. DONNÉES RÉELLES (Tes articles)
-    # Ici, tu dois passer ton DataFrame d'articles. 
-    # Exemple si tu as un DataFrame nommé 'df' :
-    # articles_json = df.to_json(orient='records')
-    
-    # Pour le test, voici une structure qui correspond à tes colonnes (source, title, date)
-    data_test = [
-        {
-            "cat": "menaces", 
-            "lat": 39.9, "lon": 116.4, 
-            "country": "Chine", 
-            "title": "North Korea's APT37 Uses Facebook Social Engineering",
-            "severity": "high", 
-            "source": "The Hacker News", 
-            "conf_score": 8.5,
-            "kw": ["APT37", "Social Engineering"],
-            "summary": "Attaque ciblant les utilisateurs via des tactiques de manipulation sur les réseaux sociaux."
-        }
-    ]
-    articles_json = json.dumps(data_test)
-
-    # 3. LECTURE ET INJECTION
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
+    # 2. PRÉPARATION DES DONNÉES (Tes 3675 articles)
+    # Remplacer 'st.session_state.df' par le nom de ton DataFrame réel
+    if 'df' in st.session_state:
+        df = st.session_state.df
         
-        # On injecte les données dans la variable JS 'EVENTS'
-        final_html = html_content.replace("const EVENTS = [];", f"const EVENTS = {articles_json};")
+        # Filtrage des colonnes nécessaires pour ne pas alourdir le JS
+        # On s'assure que les noms correspondent à ton script de nettoyage
+        colonnes_requises = ['category', 'latitude', 'longitude', 'country', 'title', 'severity', 'source', 'confidence_score', 'keywords', 'summary']
         
-        # Rendu du composant
-        components.html(final_html, height=800)
+        # On ne garde que les lignes qui ont des coordonnées GPS valides
+        df_map = df.dropna(subset=['latitude', 'longitude'])
+        
+        # Conversion en JSON pour l'injection
+        # On utilise 'records' pour avoir une liste d'objets [{...}, {...}]
+        articles_json = df_map[df_map.columns.intersection(colonnes_requises)].to_json(orient='records')
     else:
-        st.error(f"Fichier introuvable à l'adresse : {html_path}")
-        st.info("Assurez-vous que 'carte_menace.html' est bien dans le dossier 'pages/' avec ce script.")
+        # Données de secours (Mock) si le DataFrame n'est pas encore chargé
+        data_fallback = [
+            {
+                "cat": "menaces", 
+                "lat": 48.8566, "lon": 2.3522, 
+                "country": "France", 
+                "title": "Initialisation du système...",
+                "severity": "low", 
+                "source": "Système", 
+                "conf_score": 0,
+                "kw": ["Info"],
+                "summary": "Chargement des données en cours..."
+            }
+        ]
+        articles_json = json.dumps(data_fallback)
 
-charger_carte()
+    # 3. LECTURE DU HTML ET INJECTION
+    if os.path.exists(html_path):
+        try:
+            with open(html_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+            
+            # REMPLACEMENT CRITIQUE : on injecte le JSON dans la variable EVENTS du JS
+            # Note : On s'assure que le nom du fichier est 'carte_menaces.html' (avec un 's')
+            final_html = html_content.replace("const EVENTS = [];", f"const EVENTS = {articles_json};")
+            
+            # AFFICHAGE DU COMPOSANT
+            components.html(final_html, height=800, scrolling=False)
+            
+            st.success(f"Affichage de {len(df_map) if 'df' in st.session_state else 0} points de menaces.")
+            
+        except Exception as e:
+            st.error(f"Erreur lors de la lecture du fichier HTML : {e}")
+    else:
+        # Affichage d'une aide au diagnostic si le fichier n'est toujours pas trouvé
+        st.error(f"Fichier HTML introuvable.")
+        st.warning(f"Chemin tenté : `{html_path}`")
+        st.info("Vérifie que le fichier 'carte_menaces.html' est bien situé à la racine du dossier 'app'.")
+
+# --- EXÉCUTION ---
+if __name__ == "__main__":
+    charger_et_afficher_carte()
