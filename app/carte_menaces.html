@@ -1,366 +1,85 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StatCyberMatrix -- Carte de veille cyber (Cyber War Room Edition)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-  <style>
-    /* ============================================================
-       1. VARIABLES & RESET (Deep Cyber Palette)
-       ============================================================ */
-    *{margin:0;padding:0;box-sizing:border-box}
-    html,body{width:100vw;height:100vh;overflow:hidden;background:#010409;font-family:'Syne',sans-serif;color:#e8f0fe}
-    
-    :root {
-        --bg: #010409; /* Fond presque noir pour plus de contraste */
-        --bg-panel: rgba(10, 20, 40, 0.7); /* Transparence pour Glassmorphism */
-        --blue-neon: #1e6fff; 
-        --cyan-neon: #00d4ff; 
-        --green-neon: #00ff41; /* Vert Matrix plus agressif */
-        --text: #e8f0fe;
-        --muted: #7a9cc8;
-        --border: rgba(30,111,255,0.15); /* Bordures discrètes */
-        --red-neon: #ff003c; /* Rouge électrique */
-        --orange-neon: #ff9f00;
-        --sb-w: 280px;
-        --rp-w: 400px;
-    }
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background: #010409; font-family: 'Syne', sans-serif; color: #e8f0fe; overflow: hidden; }
+        
+        /* Conteneur de la carte avec filtre Cyber */
+        #map { 
+            height: 100vh; width: 100vw; 
+            background: #010409;
+            filter: brightness(0.7) contrast(1.2) saturate(1.2) hue-rotate(190deg);
+        }
 
-    /* ============================================================
-       2. ANIMATIONS & KEYFRAMES (Look technologique)
-       ============================================================ */
-    @keyframes pulse-neon {
-        0%, 100% { opacity: 1; box-shadow: 0 0 5px var(--green-neon), 0 0 10px var(--green-neon); }
-        50% { opacity: 0.5; box-shadow: 0 0 2px var(--green-neon); }
-    }
-    @keyframes marker-ring {
-        0% { transform: scale(1); opacity: 0.6; }
-        100% { transform: scale(2.5); opacity: 0; }
-    }
-    @keyframes scanline {
-        0% { transform: translateY(-100%); }
-        100% { transform: translateY(100%); }
-    }
+        /* Animation des marqueurs Radar */
+        .mk-wrap { display: flex; align-items: center; justify-content: center; position: relative; }
+        .mk-dot { border-radius: 50%; z-index: 2; box-shadow: 0 0 15px var(--mk-color); }
+        .mk-ring { 
+            position: absolute; width: 100%; height: 100%; border-radius: 50%; 
+            border: 2px solid var(--mk-color); animation: pulse 2s ease-out infinite; 
+        }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(3.5); opacity: 0; } }
 
-    /* Effet de scanline global pour l'immersion */
-    body::after {
-        content: "";
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 2px);
-        pointer-events: none;
-        z-index: 10000;
-    }
-
-    /* ============================================================
-       3. NAVIGATION (TOP BAR)
-       ============================================================ */
-    nav {
-        position: fixed; top: 0; left: 0; right: 0; height: 40px;
-        z-index: 1000; display: flex; align-items: center; justify-content: space-between;
-        padding: 0 16px; background: rgba(1, 4, 9, 0.9);
-        border-bottom: 1px solid var(--border); backdrop-filter: blur(10px);
-    }
-    .nav-logo {
-        font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
-        color: var(--cyan-neon); font-weight: 700;
-        text-shadow: 0 0 8px var(--cyan-neon);
-    }
-    .live-dot {
-        width: 8px; height: 8px; border-radius: 50%;
-        background: var(--green-neon); animation: pulse-neon 1.5s infinite;
-        display: inline-block; margin-right: 8px;
-    }
-    .nav-stats {
-        font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--muted);
-    }
-    .nav-stats strong { color: var(--text); font-weight: 700; }
-
-    /* ============================================================
-       4. SIDEBAR (PANNEAU GAUCHE - Glassmorphism)
-       ============================================================ */
-    #sidebar {
-        position: fixed; top: 40px; left: 0; bottom: 0;
-        width: var(--sb-w); z-index: 500;
-        background: var(--bg-panel); backdrop-filter: blur(15px); /* Flou plus fort */
-        border-right: 1px solid var(--border);
-        box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-        display: flex; flex-direction: column;
-        transition: transform 0.3s ease;
-    }
-    #sidebar.collapsed { transform: translateX(calc(-1 * var(--sb-w))); }
-
-    /* Titres de sections agressifs avec dégradé */
-    .sb-title, .rp-title {
-        font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
-        text-transform: uppercase; color: #fff;
-        background: linear-gradient(90deg, rgba(30,111,255,0.3), transparent);
-        padding: 5px 10px; border-left: 3px solid var(--cyan-neon);
-        margin-bottom: 10px; margin-top: 5px;
-    }
-
-    /* Uniformisation des textes dans la sidebar */
-    .layer-name, .country-name, .src-item {
-        font-size: 0.75rem; color: var(--text); font-weight: 500;
-    }
-    .layer-count, .country-n {
-        font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--muted);
-    }
-    .country-code {
-        color: var(--cyan-neon); font-family: 'JetBrains Mono', monospace;
-        margin-right: 6px;
-    }
-
-    /* Suppression des barres de défilement pour le look épuré */
-    #sidebar::-webkit-scrollbar, #right-panel::-webkit-scrollbar { display: none; }
-
-    /* ============================================================
-       5. MAP (Look "Radar bleuté")
-       ============================================================ */
-    #map {
-        position: fixed; top: 40px; left: var(--sb-w); right: var(--rp-w); bottom: 0;
-        z-index: 1; transition: left 0.3s ease;
-        /* FILTRE CRUCIAL : STYLISATION CYBER DE LA CARTE */
-        filter: brightness(0.5) contrast(1.1) saturate(1.4) hue-rotate(185deg);
-    }
-    #map.sb-collapsed { left: 0; }
-
-    /* NOUVEAU DESIGN DES MARKERS (Type Radar) */
-    .mk-wrap { display: flex; align-items: center; justify-content: center; position: relative; }
-    .mk-dot {
-        border-radius: 50%; z-index: 2;
-        box-shadow: 0 0 10px var(--mk-color), 0 0 20px var(--mk-color); /* Glow fort */
-    }
-    .mk-ring {
-        position: absolute; width: 100%; height: 100%;
-        border-radius: 50%; border: 2px solid var(--mk-color);
-        animation: marker-ring 2.5s ease-out infinite; z-index: 1;
-    }
-
-    /* ============================================================
-       6. RIGHT PANEL (Statistiques & Defcon)
-       ============================================================ */
-    #right-panel {
-        position: fixed; top: 40px; right: 0; bottom: 0;
-        width: var(--rp-w); z-index: 500;
-        background: var(--bg-panel); backdrop-filter: blur(15px);
-        border-left: 1px solid var(--border);
-        box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-        display: flex; flex-direction: column; overflow-y: auto;
-    }
-    .rp-section { padding: 8px 15px; border-bottom: 1px solid var(--border); }
-
-    /* Design des boutons DEFCON */
-    .defcon-btn {
-        width: 32px; height: 32px; border-radius: 4px;
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
-        font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
-        color: rgba(255,255,255,0.3); transition: all 0.2s;
-    }
-    .defcon-btn.active { color: #fff; box-shadow: 0 0 15px currentColor; }
-
-    /* Amélioration des cartes de statistiques */
-    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .stat-card {
-        background: rgba(30, 42, 66, 0.3); border: 1px solid var(--border);
-        border-radius: 6px; padding: 8px 12px;
-    }
-    .stat-n { font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; color: var(--cyan-neon); text-shadow: 0 0 5px var(--cyan-neon); }
-    .stat-l { font-size: 0.55rem; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
-
-    /* Barres de progression Top Menaces */
-    .threat-bar { height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; }
-    .threat-fill { height: 100%; border-radius: 2px; box-shadow: 0 0 5px currentColor; }
-
-    /* ============================================================
-       7. POPUPS (UI Custom)
-       ============================================================ */
-    .cyber-popup .leaflet-popup-content-wrapper {
-        background: rgba(2, 6, 23, 0.95) !important;
-        border: 1px solid var(--blue-neon);
-        border-radius: 4px; color: var(--text);
-        box-shadow: 0 0 20px rgba(30,111,255,0.3);
-    }
-    .cyber-popup .leaflet-popup-tip { background: var(--blue-neon); }
-    .pp-title { font-size: 0.9rem; font-weight: 700; color: #fff; }
-    .pp-meta { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--muted); margin-top: 2px; }
-    .pp-kw span {
-        font-family: 'JetBrains Mono', monospace; font-size: 0.55rem;
-        background: rgba(0, 212, 255, 0.1); color: var(--cyan-neon);
-        border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 2px;
-    }
-
-    /* ============================================================
-       8. TIMELINE & LEGEND
-       ============================================================ */
-    #timeline, #legend {
-        background: var(--bg-panel); backdrop-filter: blur(10px);
-        border: 1px solid var(--border); border-radius: 4px;
-        z-index: 700; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-    }
-    .tl-btn {
-        font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
-        background: transparent; border: 1px solid var(--border); color: var(--muted);
-        border-radius: 2px; cursor: pointer; transition: all 0.2s;
-    }
-    .tl-btn.active, .tl-btn:hover { background: rgba(30,111,255,0.2); color: #fff; border-color: var(--blue-neon); }
-
-    /* Bouton toggle sidebar */
-    #sb-toggle {
-        background: var(--bg-panel); backdrop-filter: blur(10px);
-        border: 1px solid var(--border); border-radius: 0 4px 4px 0;
-        z-index: 600; color: var(--cyan-neon); transition: all 0.3s ease;
-    }
-    #sb-toggle:hover { background: rgba(0, 212, 255, 0.1); }
-  </style>
+        /* Style des Popups (Fiche technique style tes captures) */
+        .cyber-popup .leaflet-popup-content-wrapper {
+            background: rgba(13, 20, 35, 0.95) !important;
+            border: 1px solid #1e6fff; border-radius: 4px; color: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .pp-header { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 8px; }
+        .pp-sev { color: #ff003c; font-weight: bold; }
+        .pp-body { font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; }
+        .pp-footer { margin-top: 10px; font-size: 0.7rem; color: #64748b; font-style: italic; }
+    </style>
 </head>
 <body>
-  <nav>
-    <div class="nav-logo"><div class="live-dot"></div>StatCyberMatrix // Threat Map</div>
-    <div class="nav-stats">
-        <div><strong id="n-events">0</strong> evenements analysés</div>
-        <div style="margin-left:15px;"><strong id="n-countries">0</strong> pays impactés</div>
-    </div>
-  </nav>
+    <div id="map"></div>
 
-  <div id="sb-toggle" onclick="toggleSidebar()" style="position:fixed; top:50%; width:20px; height:40px; left:280px; display:flex; align-items:center; justify-content:center; cursor:pointer;">&#9664;</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        // LE PYHTON REMPLACERA CETTE LIGNE PAR LES DONNÉES RÉELLES
+        const EVENTS = []; 
 
-  <div id="sidebar">
-    <div class="sb-section">
-      <div class="sb-title">Categories</div>
-      <div class="layer-row" onclick="toggleLayer('failles')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:5px;">
-        <div style="display:flex; align-items:center;">
-            <div class="layer-dot" style="width:8px; height:8px; border-radius:50%; background:#ff003c; margin-right:8px; box-shadow:0 0 5px #ff003c;"></div>
-            <div><div class="layer-name">Failles & Exploits</div><div class="layer-count" id="c-failles">0 art</div></div>
-        </div>
-        <div class="toggle on" id="tgl-failles" style="width:25px; height:12px; background:var(--blue-neon); border-radius:6px; position:relative;"><div style="width:10px; height:10px; background:#fff; border-radius:50%; position:absolute; top:1px; right:1px;"></div></div>
-      </div>
-      <div class="layer-row" onclick="toggleLayer('infra')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:5px;">
-        <div style="display:flex; align-items:center;">
-            <div class="layer-dot" style="width:8px; height:8px; border-radius:50%; background:#1e6fff; margin-right:8px; box-shadow:0 0 5px #1e6fff;"></div>
-            <div><div class="layer-name">Infrastructures</div><div class="layer-count" id="c-infra">0 art</div></div>
-        </div>
-        <div class="toggle on" id="tgl-infra" style="width:25px; height:12px; background:var(--blue-neon); border-radius:6px; position:relative;"><div style="width:10px; height:10px; background:#fff; border-radius:50%; position:absolute; top:1px; right:1px;"></div></div>
-      </div>
-      <div class="layer-row" onclick="toggleLayer('editeurs')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:5px;">
-        <div style="display:flex; align-items:center;">
-            <div class="layer-dot" style="width:8px; height:8px; border-radius:50%; background:#ff9f00; margin-right:8px; box-shadow:0 0 5px #ff9f00;"></div>
-            <div><div class="layer-name">Editeurs critiques</div><div class="layer-count" id="c-editeurs">0 art</div></div>
-        </div>
-        <div class="toggle on" id="tgl-editeurs" style="width:25px; height:12px; background:var(--blue-neon); border-radius:6px; position:relative;"><div style="width:10px; height:10px; background:#fff; border-radius:50%; position:absolute; top:1px; right:1px;"></div></div>
-      </div>
-      <div class="layer-row" onclick="toggleLayer('menaces')" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:5px;">
-        <div style="display:flex; align-items:center;">
-            <div class="layer-dot" style="width:8px; height:8px; border-radius:50%; background:#a855f7; margin-right:8px; box-shadow:0 0 5px #a855f7;"></div>
-            <div><div class="layer-name">Groupes & APT</div><div class="layer-count" id="c-menaces">0 art</div></div>
-        </div>
-        <div class="toggle on" id="tgl-menaces" style="width:25px; height:12px; background:var(--blue-neon); border-radius:6px; position:relative;"><div style="width:10px; height:10px; background:#fff; border-radius:50%; position:absolute; top:1px; right:1px;"></div></div>
-      </div>
-    </div>
-    <div class="sb-section" style="flex:1; overflow-y:auto;">
-      <div class="sb-title">Pays impactés</div>
-      <div id="sb-countries" style="font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:var(--muted);"></div>
-    </div>
-  </div>
+        const CFG = {
+            failles: '#ff003c', infra: '#1e6fff', editeurs: '#ff9f00', menaces: '#a855f7'
+        };
 
-  <div id="map"></div>
-
-  <div id="right-panel">
-    <div class="rp-section">
-        <div class="rp-title">Alerte de sécurité globale</div>
-        <div class="defcon-row" id="defcon-row" style="display:flex; justify-content:center; gap:5px; margin-top:5px;"></div>
-        <div class="defcon-lbl" id="defcon-lbl" style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.6rem; margin-top:3px;"></div>
-    </div>
-    <div class="rp-section">
-        <div class="rp-title">Statistiques</div>
-        <div class="stats-grid">
-            <div class="stat-card"><div class="stat-n" id="n-articles">0</div><div class="stat-l">Articles</div></div>
-            <div class="stat-card"><div class="stat-n" id="n-sources">0</div><div class="stat-l">Sources</div></div>
-            <div class="stat-card"><div class="stat-n">13</div><div class="stat-l">CVE Détectées</div></div>
-            <div class="stat-card"><div class="stat-n" id="n-crit" style="color:var(--red-neon); text-shadow: 0 0 5px var(--red-neon);">0</div><div class="stat-l">Critiques</div></div>
-        </div>
-    </div>
-    <div class="rp-section">
-        <div class="rp-title">Top Menaces (Mots-clés)</div>
-        <div id="threats-list"></div>
-    </div>
-    <div class="rp-section" style="flex:1; overflow-y:auto;">
-        <div class="rp-title">Ressources</div>
-        <a href="https://attack.mitre.org/" target="_blank" style="display:block; color:var(--cyan-neon); font-family:'JetBrains Mono',monospace; font-size:0.65rem; text-decoration:none; margin-bottom:4px;">MITRE ATT&CK Framework</a>
-        <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" style="display:block; color:var(--cyan-neon); font-family:'JetBrains Mono',monospace; font-size:0.65rem; text-decoration:none;">CISA KEV Catalog</a>
-    </div>
-  </div>
-
-  <div id="timeline" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); padding:5px 10px; display:flex; gap:5px; align-items:center;">
-    <span style="font-family:'JetBrains Mono',monospace; font-size:0.6rem; color:var(--muted)">Période:</span>
-    <button class="tl-btn" onclick="setRange(this)">24h</button>
-    <button class="tl-btn" onclick="setRange(this)">7j</button>
-    <button class="tl-btn" onclick="setRange(this)">30j</button>
-    <button class="tl-btn active" onclick="setRange(this)">Tout</button>
-  </div>
-
-  <script>
-    const EVENTS = [
-      { cat:'failles', lat:48.8, lon:2.3, country:'France', title:'Simulation d\'attaque RCE', kw:['rce', 'exploit'], severity:'critical', source:'ANSSI', org_cible:'Gouvernement', geo_mode:'target', url:'', conf_score:95, conf_label:'forte' },
-      { cat:'menaces', lat:39.9, lon:116.4, country:'Chine', title:'Activité APT suspectée', kw:['apt', 'volt typhoon'], severity:'high', source:'TheRecord', org_cible:'', geo_mode:'target', url:'', conf_score:75, conf_label:'moyenne' },
-      { cat:'infra', lat:37.1, lon:-95.7, country:'USA', title:'Panne massive suite DDoS', kw:['ddos'], severity:'medium', source:'BleepingComputer', org_cible:'Telecom Corp', geo_mode:'source', url:'', conf_score:50, conf_label:'faible' }
-    ];
-    
-    // Ton code JavaScript original (légèrement épuré pour la démo)
-    const CFG={failles:{color:'#ff003c'},infra:{color:'#1e6fff'},editeurs:{color:'#ff9f00'},menaces:{color:'#a855f7'}};
-    const SZ={critical:12,high:9,medium:7,low:5};
-    const layerState={failles:true,infra:true,editeurs:true,menaces:true};
-    const layerGroups={};
-    const map=L.map('map',{center:[20,0],zoom:2,zoomControl:false,attributionControl:false});
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-    
-    Object.keys(CFG).forEach(k=>{layerGroups[k]=L.layerGroup().addTo(map)});
-
-    function toggleSidebar(){
-        document.getElementById('sidebar').classList.toggle('collapsed');
-        document.getElementById('map').classList.toggle('sb-collapsed');
-        const btn = document.getElementById('sb-toggle');
-        btn.innerHTML = btn.innerHTML === '◀' ? '▶' : '◀';
-        btn.style.left = btn.innerHTML === '◀' ? '280px' : '0px';
-    }
-
-    function toggleLayer(cat){
-        layerState[cat]=!layerState[cat];
-        const tgl=document.getElementById('tgl-'+cat);
-        if(layerState[cat]){layerGroups[cat].addTo(map);tgl.style.background='var(--blue-neon)';}
-        else{map.removeLayer(layerGroups[cat]);tgl.style.background='#444';}
-    }
-
-    function renderMarkers(evts){
-        Object.keys(layerGroups).forEach(k=>layerGroups[k].clearLayers());
-        evts.forEach((ev,idx)=>{
-            if(!CFG[ev.cat]) return;
-            const c=CFG[ev.cat].color, s=SZ[ev.severity]||7;
-            const delay=(idx*0.2).toFixed(2);
-            
-            const icon=L.divIcon({
-                html:`<div class="mk-wrap" style="width:${s*2}px;height:${s*2}px;--mk-color:${c}">
-                        <div class="mk-ring"></div>
-                        <div class="mk-dot" style="width:${s}px;height:${s}px;background:${c};"></div>
-                      </div>`,
-                className:'', iconSize:[s*2,s*2]
-            });
-            
-            L.marker([ev.lat,ev.lon],{icon:icon}).addTo(layerGroups[ev.cat])
-             .bindPopup(`<div class="cyber-popup"><div class="pp-title">${ev.title}</div><div class="pp-meta">${ev.country} | ${ev.source}</div></div>`);
-        });
+        // Initialisation Carte (Centrée sur l'Atlantique pour voir Europe/USA)
+        const map = L.map('map', { center: [30, -10], zoom: 3, zoomControl: false, attributionControl: false });
         
-        // Mise à jour stats basique pour la démo
-        document.getElementById('n-events').innerText = evts.length;
-        document.getElementById('n-articles').innerText = evts.length;
-        document.getElementById('n-sources').innerText = new Set(evts.map(e=>e.source)).size;
-        document.getElementById('n-crit').innerText = evts.filter(e=>e.severity==='critical').length;
-    }
+        // Fond de carte sombre (CartoDB Dark Matter)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    renderMarkers(EVENTS);
-  </script>
+        // Ajout des marqueurs
+        EVENTS.forEach(ev => {
+            const color = CFG[ev.cat] || '#00ff41';
+            const size = ev.severity === 'critical' ? 10 : 6;
+            
+            const icon = L.divIcon({
+                html: `<div class="mk-wrap" style="--mk-color:${color}">
+                        <div class="mk-ring"></div>
+                        <div class="mk-dot" style="width:${size}px; height:${size}px; background:${color}"></div>
+                       </div>`,
+                className: '', iconSize: [size*4, size*4]
+            });
+
+            L.marker([ev.lat, ev.lon], {icon: icon}).addTo(map)
+             .bindPopup(`
+                <div class="cyber-popup">
+                    <div class="pp-header">FICHE : ${ev.title}</div>
+                    <div class="pp-body">
+                        <strong>Sévérité NVD :</strong> <span class="pp-sev">${ev.severity.toUpperCase()}</span> (Score: ${ev.conf_score})<br><br>
+                        ${ev.summary}<br>
+                        <div style="margin-top:5px; color:#1e6fff;">#${ev.kw.join(' #')}</div>
+                    </div>
+                    <div class="pp-footer">Source: ${ev.source} | Pays: ${ev.country}</div>
+                </div>
+             `, { maxWidth: 300 });
+        });
+    </script>
 </body>
 </html>
