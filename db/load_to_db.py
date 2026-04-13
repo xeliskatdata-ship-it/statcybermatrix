@@ -83,8 +83,10 @@ def _load_raw(engine):
                         )
                     """), row.to_dict())
                     ins += 1
-                except Exception:
-                    skip += 1
+                except Exception as e:
+                if skip == 0:
+                    log.error("Premiere erreur INSERT : %s", e)
+                skip += 1
 
         log.info("raw  | %s : %d inserees / %d ignorees", os.path.basename(fp), ins, skip)
         total_ins  += ins
