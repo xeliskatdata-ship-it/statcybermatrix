@@ -208,6 +208,10 @@ PLOTLY_THEME = dict(
     font=dict(family="JetBrains Mono", size=11, color="#c8d6e5"),
     margin=dict(l=40, r=40, t=40, b=40),
     colorway=["#00d4ff", "#a855f7", "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#ec4899", "#14b8a6"],
+)
+
+# Axes separees -- a utiliser uniquement sur les graphiques XY (scatter, line, bar, heatmap)
+PLOTLY_AXES = dict(
     xaxis=dict(gridcolor="rgba(0,212,255,0.06)", zerolinecolor="rgba(0,212,255,0.1)"),
     yaxis=dict(gridcolor="rgba(0,212,255,0.06)", zerolinecolor="rgba(0,212,255,0.1)"),
 )

@@ -88,7 +88,9 @@ fig_tree = px.treemap(
     range_color=[0.5, 2.5]
 )
 fig_tree.update_traces(textinfo="label+value", textfont=dict(color="white"))
-fig_tree.update_layout(margin=dict(t=0, b=0, l=10, r=10), **PLOTLY_THEME)
+fig_tree.update_layout(margin=dict(t=0, b=0, l=10, r=10),
+    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(5,10,20,0.4)",
+    font=dict(family="JetBrains Mono", size=11, color="#c8d6e5"))
 st.plotly_chart(fig_tree, use_container_width=True)
 
 if not df_filtered.empty:

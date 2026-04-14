@@ -38,7 +38,9 @@ with col1:
         color='nb_articles',
         color_continuous_scale=['#050a14', '#3b82f6', '#a855f7', '#00d4ff']
     )
-    fig_tree.update_layout(margin=dict(t=0, l=0, r=0, b=0), **PLOTLY_THEME)
+    fig_tree.update_layout(margin=dict(t=0, l=0, r=0, b=0),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(5,10,20,0.4)",
+        font=dict(family="JetBrains Mono", size=11, color="#c8d6e5"))
     st.plotly_chart(fig_tree, use_container_width=True)
 
 with col2:
