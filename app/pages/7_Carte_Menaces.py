@@ -640,7 +640,6 @@ for layer_key, elem_id in [("failles", "c-failles"), ("infra", "c-infra"),
 
 # Inject stats overlay
 html = re.sub(r'id="so-articles">[^<]+', f'id="so-articles">{n_events}', html)
-html = re.sub(r'id="so-cve">[^<]+', f'id="so-cve">{n_cve}', html)
 html = re.sub(r'id="so-crit">[^<]+', f'id="so-crit">{n_crit}', html)
 
 n_sources_actives = len({e["source"] for e in events})

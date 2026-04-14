@@ -77,8 +77,8 @@
   <nav>
     <div class="nav-logo"><div class="live-dot"></div>StatCyberMatrix / Globe de veille cyber</div>
     <div class="nav-stats">
-      <div><strong id="n-events">0</strong> événements</div>
-      <div><strong id="n-countries">0</strong> pays</div>
+      <div><strong id="n-events">0</strong> attaques attribuées</div>
+      <div><strong id="n-countries">0</strong> pays ciblés</div>
       <div><strong id="n-layers">4</strong> catégories</div>
     </div>
   </nav>
@@ -106,9 +106,9 @@
   <div id="debug-overlay">Chargement du globe 3D...</div>
 
   <div id="stats-overlay">
-    <div class="so-card"><div class="so-n" id="so-articles">0</div><div class="so-l">Articles</div></div>
+    <div class="so-card"><div class="so-n" id="so-articles">0</div><div class="so-l">Attaques</div></div>
     <div class="so-card"><div class="so-n" id="so-sources">0</div><div class="so-l">Sources</div></div>
-    <div class="so-card"><div class="so-n" id="so-cve">0</div><div class="so-l">CVE</div></div>
+    <div class="so-card"><div class="so-n" id="so-atk">0</div><div class="so-l">Attaquants</div></div>
     <div class="so-card"><div class="so-n" id="so-crit">0</div><div class="so-l">Critiques</div></div>
   </div>
 
@@ -371,17 +371,23 @@ try {
     _arcObjects.push({line:line,head:head,ev:ev,curve:curve,phase:Math.random(),speed:0.15+Math.random()*0.2});
   }
 
-  // ── BUILD ──
+  // ── BUILD — only attributed attacks (attacker + victim identified) ──
   function buildVisuals(evts){
     while(_markerGroup.children.length)_markerGroup.remove(_markerGroup.children[0]);
     while(_arcGroup.children.length)_arcGroup.remove(_arcGroup.children[0]);
     _markerMeshes.length=0; _arcObjects.length=0;
     _currentEvents=evts;
-    var vis=evts.filter(function(e){return _layerState[e.cat]});
+    // Filtre strict : categorie active + attaquant identifie + victime identifiee
+    var vis=evts.filter(function(e){
+      return _layerState[e.cat] && e.atk_country && e.geo_mode==='target';
+    });
     vis.forEach(function(ev){createMarker(ev);createArc(ev);});
     var nE=vis.length;
     var countries={}; vis.forEach(function(e){countries[e.country]=1});
     var nC=Object.keys(countries).length;
+    // Compteur attaquants uniques
+    var attackers={}; vis.forEach(function(e){if(e.atk_country)attackers[e.atk_country]=1});
+    var nAtk=Object.keys(attackers).length;
     var srcs={}; vis.forEach(function(e){srcs[e.source]=1});
     var nS=Object.keys(srcs).length;
     var nCrit=vis.filter(function(e){return e.severity==='critical'}).length;
@@ -392,6 +398,7 @@ try {
     el=document.getElementById('so-articles');if(el)el.textContent=nE;
     el=document.getElementById('so-sources');if(el)el.textContent=nS;
     el=document.getElementById('so-crit');if(el)el.textContent=nCrit;
+    el=document.getElementById('so-atk');if(el)el.textContent=nAtk;
     var cc={};vis.forEach(function(e){cc[e.cat]=(cc[e.cat]||0)+1});
     ['failles','infra','editeurs','menaces'].forEach(function(k){
       el=document.getElementById('c-'+k);if(el)el.textContent=(cc[k]||0)+' art';
