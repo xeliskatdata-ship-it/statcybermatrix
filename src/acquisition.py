@@ -1,5 +1,6 @@
 # acquisition.py -- Collecte reelle des articles cyber
-# Sprint 5 : 3 API (NewsAPI, OTX, NVD) + 61 flux RSS = 64 sources
+# Sprint 6 : 7 API + 61 flux RSS = 68 sources
+# Nouvelles API : Ransomware.live, ThreatFox, URLhaus, MalwareBazaar
 # Sortie : data/raw/articles_YYYY-MM-DD.csv
 
 import logging
@@ -237,7 +238,197 @@ def collect_nvd():
 
 
 # ---------------------------------------------------
-# 4. FLUX RSS (61 sources, fallback 2 etapes)
+# 4. RANSOMWARE.LIVE -- victimes recentes avec groupe
+# Gratuit, pas de cle API
+# ---------------------------------------------------
+def collect_ransomware_live():
+    try:
+        r = requests.get(
+            "https://api.ransomware.live/v2/recentvictims",
+            headers=HEADERS_CHROME,
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        articles = []
+        for v in data[:200]:
+            group   = v.get("group_name", "unknown")
+            victim  = v.get("victim", "")
+            country = v.get("country", "")
+            date    = v.get("discovered", "") or v.get("published", "")
+            url     = v.get("post_url") or v.get("website", "") or ""
+
+            # Titre structure pour le NLP : "Groupe revendique Victime (Pays)"
+            title = f"{group} ransomware attack on {victim}"
+            if country:
+                title += f" ({country})"
+
+            desc = f"Ransomware group {group} claimed attack on {victim}."
+            if country:
+                desc += f" Victim located in {country}."
+
+            articles.append(_row(
+                "Ransomware.live", title, desc, url, date,
+            ))
+
+        log.info("Ransomware.live : %d victimes", len(articles))
+        return articles
+
+    except Exception as e:
+        log.error("Ransomware.live : %s", e)
+        return []
+
+
+# ---------------------------------------------------
+# 5. THREATFOX (Abuse.ch) -- IOCs avec familles malware
+# Gratuit, pas de cle API
+# ---------------------------------------------------
+def collect_threatfox():
+    try:
+        r = requests.post(
+            "https://threatfox-api.abuse.ch/api/v1/",
+            json={"query": "get_iocs", "days": 1},
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        if data.get("query_status") != "ok":
+            log.warning("ThreatFox : status %s", data.get("query_status"))
+            return []
+
+        articles = []
+        seen = set()
+        for ioc in data.get("data", [])[:150]:
+            family  = ioc.get("malware_printable", "")
+            ioc_val = ioc.get("ioc", "")
+            tags    = ", ".join(ioc.get("tags", []) or [])
+            threat  = ioc.get("threat_type_desc", "")
+            date    = ioc.get("first_seen_utc", "")
+
+            # Dedup par famille+type (evite 50 IOCs identiques)
+            key = f"{family}_{threat}"
+            if key in seen:
+                continue
+            seen.add(key)
+
+            title = f"{family} -- {threat}" if threat else family
+            desc  = f"Malware family: {family}. IOC: {ioc_val}. Tags: {tags}"
+
+            articles.append(_row(
+                "ThreatFox",
+                title, desc,
+                f"https://threatfox.abuse.ch/ioc/{ioc.get('id', '')}",
+                date,
+            ))
+
+        log.info("ThreatFox : %d familles", len(articles))
+        return articles
+
+    except Exception as e:
+        log.error("ThreatFox : %s", e)
+        return []
+
+
+# ---------------------------------------------------
+# 6. URLHAUS (Abuse.ch) -- URLs malveillantes recentes
+# Gratuit, pas de cle API
+# ---------------------------------------------------
+def collect_urlhaus():
+    try:
+        r = requests.post(
+            "https://urlhaus-api.abuse.ch/v1/urls/recent/",
+            data={"limit": 100},
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        articles = []
+        seen = set()
+        for u in data.get("urls", [])[:100]:
+            threat = u.get("threat", "") or "malware"
+            tags   = ", ".join(u.get("tags", []) or [])
+            url_v  = u.get("url", "")
+            date   = u.get("date_added", "")
+
+            # Dedup par threat type
+            key = f"{threat}_{tags}"
+            if key in seen:
+                continue
+            seen.add(key)
+
+            title = f"Malicious URL distributing {threat}"
+            if tags:
+                title += f" ({tags})"
+            desc = f"URLhaus: malicious URL distributing {threat}. Tags: {tags}. URL: {url_v[:100]}"
+
+            articles.append(_row(
+                "URLhaus", title, desc,
+                f"https://urlhaus.abuse.ch/url/{u.get('id', '')}",
+                date,
+            ))
+
+        log.info("URLhaus : %d URLs", len(articles))
+        return articles
+
+    except Exception as e:
+        log.error("URLhaus : %s", e)
+        return []
+
+
+# ---------------------------------------------------
+# 7. MALWAREBAZAAR (Abuse.ch) -- echantillons malware recents
+# Gratuit, pas de cle API
+# ---------------------------------------------------
+def collect_malwarebazaar():
+    try:
+        r = requests.post(
+            "https://mb-api.abuse.ch/api/v1/",
+            data={"query": "get_recent", "selector": "time"},
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        if data.get("query_status") != "ok":
+            log.warning("MalwareBazaar : status %s", data.get("query_status"))
+            return []
+
+        articles = []
+        seen = set()
+        for s in data.get("data", [])[:100]:
+            family = s.get("signature", "") or "unknown"
+            ftype  = s.get("file_type", "")
+            tags   = ", ".join(s.get("tags", []) or [])
+            date   = s.get("first_seen", "")
+            sha    = s.get("sha256_hash", "")[:16]
+
+            # Dedup par famille
+            if family in seen:
+                continue
+            seen.add(family)
+
+            title = f"{family} malware sample detected ({ftype})"
+            desc  = f"MalwareBazaar: {family} ({ftype}). Tags: {tags}. SHA256: {sha}..."
+
+            articles.append(_row(
+                "MalwareBazaar", title, desc,
+                f"https://bazaar.abuse.ch/sample/{s.get('sha256_hash', '')}",
+                date,
+            ))
+
+        log.info("MalwareBazaar : %d familles", len(articles))
+        return articles
+
+    except Exception as e:
+        log.error("MalwareBazaar : %s", e)
+        return []
+
+
+# ---------------------------------------------------
+# 8. FLUX RSS (61 sources, fallback 2 etapes)
 # ---------------------------------------------------
 def collect_rss():
     articles = []
@@ -278,7 +469,7 @@ def collect_rss():
 
 
 # ---------------------------------------------------
-# 5. SAUVEGARDE CSV
+# 9. SAUVEGARDE CSV
 # ---------------------------------------------------
 def _save_to_csv(articles):
     if not articles:
@@ -300,17 +491,21 @@ def _save_to_csv(articles):
 
 
 # ---------------------------------------------------
-# 6. ORCHESTRATION
+# 10. ORCHESTRATION
 # ---------------------------------------------------
 def main():
     log.info("=" * 50)
-    log.info("CyberPulse -- Collecte S5 -- %d sources", 3 + len(RSS_FEEDS))
+    log.info("StatCyberMatrix -- Collecte S6 -- %d sources", 7 + len(RSS_FEEDS))
     log.info("=" * 50)
 
     all_articles = (
         collect_newsapi()
         + collect_otx()
         + collect_nvd()
+        + collect_ransomware_live()
+        + collect_threatfox()
+        + collect_urlhaus()
+        + collect_malwarebazaar()
         + collect_rss()
     )
 

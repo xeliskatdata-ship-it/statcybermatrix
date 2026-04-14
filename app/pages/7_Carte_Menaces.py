@@ -153,37 +153,59 @@ def _context_country(text):
 # ATTRIBUTION -- APT/groupe -> pays attaquant
 # ==============================================================
 _APT_COUNTRY = {
-    # Russie
+    # Russie -- etat + ransomware gangs (majorite RU-linked)
     "fancy bear": "Russie", "apt28": "Russie", "cozy bear": "Russie",
     "apt29": "Russie", "sandworm": "Russie", "turla": "Russie",
     "gamaredon": "Russie", "evil corp": "Russie", "nobelium": "Russie",
     "star blizzard": "Russie", "midnight blizzard": "Russie",
     "seashell blizzard": "Russie", "ember bear": "Russie",
     "revil": "Russie", "conti": "Russie", "lockbit": "Russie",
-    "black basta": "Russie", "clop": "Russie", "darkside": "Russie",
-    "blackcat": "Russie", "alphv": "Russie",
-    # Chine
+    "black basta": "Russie", "clop": "Russie", "cl0p": "Russie",
+    "darkside": "Russie", "blackcat": "Russie", "alphv": "Russie",
+    "qilin": "Russie", "akira": "Russie", "play ransomware": "Russie",
+    "play": "Russie", "medusa": "Russie", "8base": "Russie",
+    "bianlian": "Russie", "rhysida": "Russie", "royal": "Russie",
+    "blacksuit": "Russie", "black suit": "Russie",
+    "hunters international": "Russie", "inc ransom": "Russie",
+    "ransomhub": "Russie", "dragonforce": "Russie",
+    "cactus": "Russie", "trigona": "Russie", "snatch": "Russie",
+    "cuba ransomware": "Russie", "hive": "Russie",
+    "vice society": "Russie", "ragnar locker": "Russie",
+    "blackbyte": "Russie", "avos locker": "Russie",
+    "phobos": "Russie", "mallox": "Russie",
+    "nightspire": "Russie", "termite": "Russie",
+    "fog": "Russie", "lynx": "Russie", "embargo": "Russie",
+    "noescape": "Russie", "nokoyawa": "Russie",
+    # Chine -- etat
     "volt typhoon": "Chine", "salt typhoon": "Chine",
     "flax typhoon": "Chine", "charcoal typhoon": "Chine",
+    "silk typhoon": "Chine", "brass typhoon": "Chine",
     "apt41": "Chine", "apt10": "Chine", "apt31": "Chine",
-    "apt40": "Chine", "apt27": "Chine", "hafnium": "Chine",
+    "apt40": "Chine", "apt27": "Chine", "apt3": "Chine",
+    "apt17": "Chine", "hafnium": "Chine",
     "mustang panda": "Chine", "winnti": "Chine",
     "backdoor diplomacy": "Chine", "gallium": "Chine",
     "cicada": "Chine", "bronze starlight": "Chine",
-    "silk typhoon": "Chine", "brass typhoon": "Chine",
+    "earth lusca": "Chine", "earth estries": "Chine",
+    "space pirates": "Chine", "ghost emperor": "Chine",
+    "weaver ant": "Chine", "storm-0558": "Chine",
     # Coree du Nord
     "lazarus": "Coree du Nord", "kimsuky": "Coree du Nord",
     "apt38": "Coree du Nord", "andariel": "Coree du Nord",
     "bluenoroff": "Coree du Nord", "sapphire sleet": "Coree du Nord",
     "citrine sleet": "Coree du Nord", "diamond sleet": "Coree du Nord",
-    "jade sleet": "Coree du Nord",
+    "jade sleet": "Coree du Nord", "bureau 121": "Coree du Nord",
+    "labyrinth chollima": "Coree du Nord",
     # Iran
     "charming kitten": "Iran", "apt35": "Iran", "apt33": "Iran",
-    "apt34": "Iran", "muddywater": "Iran", "oilrig": "Iran",
-    "agrius": "Iran", "moses staff": "Iran", "peach sandstorm": "Iran",
-    "mint sandstorm": "Iran", "cotton sandstorm": "Iran",
+    "apt34": "Iran", "apt42": "Iran", "muddywater": "Iran",
+    "oilrig": "Iran", "agrius": "Iran", "moses staff": "Iran",
+    "peach sandstorm": "Iran", "mint sandstorm": "Iran",
+    "cotton sandstorm": "Iran", "imperial kitten": "Iran",
+    "tortoiseshell": "Iran", "lyceum": "Iran",
     # Autres
     "scattered spider": "USA", "lapsus$": "UK",
+    "shinyhunters": "France",
 }
 
 # Coordonnees des pays attaquants
@@ -191,17 +213,26 @@ _ATTACKER_GEO = {
     "Russie": (55.7, 37.6), "Chine": (39.9, 116.4),
     "Coree du Nord": (39.0, 125.7), "Iran": (35.7, 51.4),
     "USA": (37.1, -95.7), "UK": (51.5, -0.1),
+    "France": (48.8, 2.3),
 }
 
-# Patterns d'attribution dans le texte
+# Patterns d'attribution dans le texte (EN + FR)
 _ATTRIB_PATTERNS = [
+    # EN -- country-linked
     r"(?P<country>Russia|Russian|China|Chinese|North\s+Korea|North\s+Korean|Iran|Iranian)[\s\-]+(?:linked|backed|sponsored|affiliated|aligned|nexus|based|state)",
     r"(?:linked|backed|sponsored|affiliated|attributed)\s+(?:to\s+)?(?P<country>Russia|China|North\s+Korea|Iran|DPRK)",
     r"(?P<country>Russia|China|North\s+Korea|Iran|DPRK)\s+(?:hackers?|threat\s+actors?|cyber\s+(?:espionage|attack|group|operation))",
     r"(?:state[\s\-]sponsored|nation[\s\-]state)\s+(?:threat\s+)?(?:actor|group|hacker)s?\s+(?:from|in|based\s+in)\s+(?P<country>Russia|China|North\s+Korea|Iran)",
-    # FR
-    r"(?:attribu|li[eE]|rattach)[eE]e?\s+(?:[aà]\s+la?\s+)?(?P<country>Russie|Chine|Cor[eE]e\s+du\s+Nord|Iran)",
-    r"(?:hackers?|pirates?|groupe)\s+(?P<country>russe|chinois|nord[\s\-]cor[eE]en|iranien)s?",
+    # EN -- ransomware claimed
+    r"(?:claimed|claim)\s+(?:by|responsibility)\s+(?:the\s+)?(?:ransomware\s+)?(?:group|gang|operator)?\s*(?P<country>Russia|China|North\s+Korea|Iran)",
+    # FR -- attribution directe
+    r"(?:attribu|li[eéÉ]|rattach)[eéÉ]e?\s+(?:[aà]\s+la?\s+)?(?P<country>Russie|Chine|Cor[eéÉ]e\s+du\s+Nord|Iran)",
+    r"(?:hackers?|pirates?|groupe|gang)\s+(?P<country>russe|chinois|nord[\s\-]cor[eéÉ]en|iranien)s?",
+    # FR -- revendication (tres courant dans la presse FR)
+    r"(?:revendiqu[eéÉ]e?|revendication)\s+(?:par|du\s+groupe)\s+",
+    r"(?:attaque|piratage|ransomware)\s+(?:contre|visant|ciblant)\s+(?:la\s+)?(?:France|.*?fran[cçÇ]ais)",
+    # FR -- "le groupe X a attaque"
+    r"le\s+groupe\s+(?:de\s+)?(?:ransomware\s+)?(?:[\w\s]+)\s+(?:a\s+)?(?:revendiqu|attaqu|cibl|vis)[eéÉ]",
 ]
 
 _COUNTRY_NORMALIZE = {
@@ -364,6 +395,11 @@ SOURCE_GEO = {
     "NCSC UK": ("UK", 51.5, -0.1), "ENISA": ("Belgium", 50.8, 4.4),
     "Wired Security": ("USA", 37.8, -122.4), "Ars Technica Security": ("USA", 37.8, -122.4),
     "LeMagIT Securite": ("France", 48.8, 2.3), "No.log": ("France", 48.8, 2.3),
+    # Sprint 6 -- nouvelles API
+    "Ransomware.live": ("France", 48.8, 2.3),
+    "ThreatFox": ("Switzerland", 47.4, 8.5),
+    "URLhaus": ("Switzerland", 47.4, 8.5),
+    "MalwareBazaar": ("Switzerland", 47.4, 8.5),
 }
 
 
