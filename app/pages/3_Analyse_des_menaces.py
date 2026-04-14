@@ -47,8 +47,8 @@ with col2:
         top_cat = df.groupby('category')['nb_articles'].sum().idxmax()
         # category = terme technique, jamais traduit
         _ins = {
-            "en": f"<b>Dominant vector:</b> {top_cat.upper()}<br><br>Critical concentration observed on the <b>{top_cat}</b> vector. Consultants should prioritize audits on this perimeter for the next 72h.",
-            "fr": f"<b>Vecteur dominant :</b> {top_cat.upper()}<br><br>Concentration critique observee sur le vecteur <b>{top_cat}</b>. Les consultants devraient prioriser les audits sur ce perimetre pour les prochaines 72h.",
+            "en": f"<b>Dominant vector:</b> {top_cat.upper()}<br><br>Critical concentration observed on the <b>{top_cat}</b> vector.",
+            "fr": f"<b>Vecteur dominant :</b> {top_cat.upper()}<br><br>Concentration critique observee sur le vecteur <b>{top_cat}</b>.",
         }
         st.markdown(f'<div class="insight-box">{_ins[lang]}</div>', unsafe_allow_html=True)
 
