@@ -74,6 +74,8 @@ _NLP = load_nlp()
 _FR_SOURCES = {
     "Zataz", "ANSSI", "French Breaches", "CERT-EU",
     "LeMagIT Securite", "No.log",
+    "Cybermalveillance", "IT-Connect", "UnderNews", "Cyber-news.fr",
+    "Orange Cyberdefense", "Sekoia Blog",
 }
 
 def _get_nlp(source):
@@ -403,6 +405,47 @@ SOURCE_GEO = {
     "ThreatFox": ("Switzerland", 47.4, 8.5),
     "URLhaus": ("Switzerland", 47.4, 8.5),
     "MalwareBazaar": ("Switzerland", 47.4, 8.5),
+    # Sprint 6 -- 20 nouveaux RSS
+    "Cybermalveillance": ("France", 48.8, 2.3),
+    "IT-Connect": ("France", 48.8, 2.3),
+    "UnderNews": ("France", 48.8, 2.3),
+    "Cyber-news.fr": ("France", 48.8, 2.3),
+    "Cyble Blog": ("USA", 37.1, -95.7),
+    "SOCRadar Blog": ("USA", 37.1, -95.7),
+    "Flashpoint Blog": ("USA", 40.7, -74.0),
+    "Security Affairs": ("Italy", 41.9, 12.6),
+    "Cyber Security News": ("USA", 37.1, -95.7),
+    "Google Threat Intel": ("USA", 37.4, -122.1),
+    "Check Point Research": ("Israel", 32.1, 34.8),
+    "Fortinet Threat Research": ("USA", 37.4, -122.1),
+    "Sophos News": ("UK", 51.5, -0.1),
+    "Trellix Blog": ("USA", 37.1, -95.7),
+    "IntelligenceX Blog": ("Czech Republic", 50.1, 14.4),
+    "CERT-NZ": ("New Zealand", -41.3, 174.8),
+    "CERT-AU": ("Australia", -35.3, 149.1),
+    "BSI Allemagne": ("Germany", 52.5, 13.4),
+    "JPCERT Japon": ("Japan", 35.7, 139.7),
+    "Google Security Blog": ("USA", 37.4, -122.1),
+    # Sprint 6 batch 2 -- 19 nouveaux RSS
+    "TechCrunch Security": ("USA", 37.8, -122.4),
+    "Cyber Defense Magazine": ("USA", 37.1, -95.7),
+    "Heimdal Blog": ("Denmark", 55.7, 12.6),
+    "Troy Hunt": ("Australia", -33.9, 151.2),
+    "Bitdefender Labs": ("Romania", 44.4, 26.1),
+    "Volexity Blog": ("USA", 38.9, -77.0),
+    "Rapid7 Blog": ("USA", 42.4, -71.1),
+    "Tenable Blog": ("USA", 39.0, -77.5),
+    "Qualys Blog": ("USA", 37.4, -122.1),
+    "Nozomi Networks": ("USA", 37.4, -122.1),
+    "ZDI Advisories": ("USA", 33.2, -97.1),
+    "AWS Security Blog": ("USA", 47.6, -122.3),
+    "GitHub Security": ("USA", 37.8, -122.4),
+    "Cloudflare Blog": ("USA", 37.8, -122.4),
+    "Europol": ("Netherlands", 52.1, 4.3),
+    "Interpol Cyber": ("France", 45.7, 4.8),
+    "Malware Traffic Analysis": ("USA", 37.1, -95.7),
+    "Orange Cyberdefense": ("France", 48.8, 2.3),
+    "Sekoia Blog": ("France", 48.8, 2.3),
 }
 
 
