@@ -20,8 +20,15 @@ def inject_theme():
         font-family: 'JetBrains Mono', monospace !important;
     }
 
-    /* Masquer le header Streamlit */
-    header[data-testid="stHeader"] { display: none !important; }
+    /* Masquer le header mais garder le bouton sidebar */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        border: none !important;
+    }
+    header[data-testid="stHeader"] .stDeployButton,
+    header[data-testid="stHeader"] [data-testid="stStatusWidget"] {
+        display: none !important;
+    }
 
     /* Tout le texte en clair */
     [data-testid="stMarkdownContainer"] p,

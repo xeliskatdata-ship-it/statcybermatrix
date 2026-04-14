@@ -105,19 +105,41 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── MAIN METRICS ──────────────────────────────────────────────────────────────
-st.markdown(f"""
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
-    <div style="background:rgba(10,22,40,0.75);border:1px solid rgba(0,212,255,0.12);border-radius:12px;padding:28px;text-align:center;border-bottom:3px solid #00d4ff;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a9cc8;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px;">{t("Articles collected", lang).upper()}</div>
-        <div style="font-family:'Syne',sans-serif;font-size:56px;font-weight:800;color:#00d4ff;line-height:1;text-shadow:0 0 30px rgba(0,212,255,0.3);">{total_articles:,}</div>
+# ── MAIN METRICS (animated counters) ──────────────────────────────────────────
+_lbl_art = "ARTICLES COLLECTED" if lang == "en" else "ARTICLES COLLECTES"
+_lbl_src = "ACTIVE SOURCES" if lang == "en" else "SOURCES ACTIVES"
+
+components.html(f"""
+<style>
+@font-face {{ font-family:'Syne'; src:url('https://fonts.gstatic.com/s/syne/v22/8vIS7w4qzmVxp2ztD.woff2') format('woff2'); font-weight:800; }}
+@font-face {{ font-family:'JBM'; src:url('https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4xD-.woff2') format('woff2'); font-weight:400; }}
+body {{ background:transparent; margin:0; overflow:hidden; }}
+.cards {{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }}
+.card {{ background:rgba(10,22,40,0.75); border:1px solid var(--bc); border-bottom:3px solid var(--ac); border-radius:12px; padding:24px; text-align:center; }}
+.label {{ font-family:'JBM',monospace; font-size:10px; color:#7a9cc8; letter-spacing:2.5px; margin-bottom:8px; }}
+.num {{ font-family:'Syne',sans-serif; font-size:52px; font-weight:800; color:var(--ac); line-height:1; }}
+</style>
+<div class="cards">
+    <div class="card" style="--ac:#00d4ff;--bc:rgba(0,212,255,0.12)">
+        <div class="label">{_lbl_art}</div>
+        <div class="num" id="c1">0</div>
     </div>
-    <div style="background:rgba(10,22,40,0.75);border:1px solid rgba(168,85,247,0.12);border-radius:12px;padding:28px;text-align:center;border-bottom:3px solid #a855f7;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a9cc8;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px;">{t("Active sources", lang).upper()}</div>
-        <div style="font-family:'Syne',sans-serif;font-size:56px;font-weight:800;color:#a855f7;line-height:1;text-shadow:0 0 30px rgba(168,85,247,0.3);">{nb_sources}</div>
+    <div class="card" style="--ac:#a855f7;--bc:rgba(168,85,247,0.12)">
+        <div class="label">{_lbl_src}</div>
+        <div class="num" id="c2">0</div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+<script>
+function fmt(n){{ return n.toString().replace(/\\B(?=(\\d{{3}})+(?!\\d))/g, '\\u00A0'); }}
+function anim(id,target,ms){{
+    var el=document.getElementById(id),t0=null;
+    function step(ts){{ if(!t0)t0=ts; var p=Math.min((ts-t0)/ms,1),ease=1-Math.pow(1-p,3); el.textContent=fmt(Math.floor(ease*target)); if(p<1)requestAnimationFrame(step); }}
+    requestAnimationFrame(step);
+}}
+anim('c1',{total_articles},2000);
+anim('c2',{nb_sources},1200);
+</script>
+""", height=150)
 
 # ── RECENT TABLE ──────────────────────────────────────────────────────────────
 if not df_articles.empty:
