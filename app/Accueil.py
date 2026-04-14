@@ -1,5 +1,4 @@
 # Accueil.py -- StatCyberMatrix Dashboard -- Home page
-# Unified theme + English default + FR toggle
 
 import base64
 import os
@@ -21,7 +20,6 @@ from sidebar_css import inject_sidebar_css
 from page_theme import inject_theme, PLOTLY_THEME
 inject_theme()
 
-# ── LANGUAGE STATE ───────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
     st.session_state.lang = "en"
 
@@ -37,28 +35,67 @@ if os.path.exists(_logo_path):
     with open(_logo_path, "rb") as f:
         LOGO_B64 = base64.b64encode(f.read()).decode()
 
-# ── SIDEBAR (language selector FIRST, then inject CSS with the result) ───────
+# ── SIDEBAR ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     if LOGO_B64:
         st.markdown(f"<div style='text-align:center'><img src='data:image/png;base64,{LOGO_B64}' style='width:100%;'></div>", unsafe_allow_html=True)
     st.divider()
-
-    lang_choice = st.selectbox(
-        "Language",
-        options=["English", "Francais"],
-        index=0 if st.session_state.lang == "en" else 1,
-        key="lang_select"
-    )
-    new_lang = "en" if lang_choice == "English" else "fr"
-    st.session_state.lang = new_lang
-    lang = new_lang
-
+    lang_choice = st.selectbox("Language", options=["English", "Francais"],
+                               index=0 if st.session_state.lang == "en" else 1, key="lang_select")
+    st.session_state.lang = "en" if lang_choice == "English" else "fr"
+    lang = st.session_state.lang
     if st.button(t("Refresh", lang)):
         force_refresh()
         st.rerun()
 
-# Sidebar CSS injecte APRES que lang soit determine
 inject_sidebar_css(lang)
+
+# ── KPI CARD CSS ─────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+.kpi-card {
+    background: rgba(10,22,40,0.7);
+    border: 1px solid rgba(0,212,255,0.08);
+    border-left: 3px solid var(--c);
+    border-radius: 10px;
+    padding: 36px 22px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.kpi-card:hover {
+    background: rgba(10,22,40,0.95);
+    transform: translateX(4px);
+    border-color: rgba(0,212,255,0.2);
+}
+.kpi-ghost {
+    position: absolute;
+    top: -12px;
+    right: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 120px;
+    font-weight: 800;
+    color: var(--c);
+    opacity: 0.04;
+    line-height: 1;
+    pointer-events: none;
+}
+.kpi-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    line-height: 1.3;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ── BANNER ────────────────────────────────────────────────────────────────────
 st.markdown(f"""
@@ -74,11 +111,7 @@ components.html(f"""
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 body {{ background:transparent; margin:0; }}
 .cards {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; font-family:'JetBrains Mono',monospace; }}
-.card {{
-    background:rgba(10,22,40,0.7); border:1px solid rgba(0,212,255,0.1);
-    border-radius:10px; padding:22px; text-align:center; color:#7a9cc8;
-    font-size:0.65rem; text-transform:uppercase; letter-spacing:1.5px;
-}}
+.card {{ background:rgba(10,22,40,0.7); border:1px solid rgba(0,212,255,0.1); border-radius:10px; padding:22px; text-align:center; color:#7a9cc8; font-size:0.65rem; text-transform:uppercase; letter-spacing:1.5px; }}
 .value {{ font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; color:#00d4ff; margin-top:4px; }}
 </style>
 <div class="cards">
@@ -92,93 +125,37 @@ if not df_articles.empty:
     df_articles['published_date'] = pd.to_datetime(df_articles['published_date']).dt.strftime('%Y-%m-%d')
     st.dataframe(
         df_articles[["source", "title", "published_date"]].head(10),
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "source": t("Sources", lang),
-            "title": "Title",
-            "published_date": st.column_config.TextColumn("Date", width="small")
-        }
+        use_container_width=True, hide_index=True,
+        column_config={"source": t("Sources", lang), "title": "Title",
+                       "published_date": st.column_config.TextColumn("Date", width="small")}
     )
 
-# ── KPI CARDS ─────────────────────────────────────────────────────────────────
+# ── KPI CARDS (titres uniquement, pas de description) ────────────────────────
 st.markdown("<br>", unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-.kpi-btn-inner {
-    background: rgba(10,22,40,0.7); border-radius: 10px;
-    border-left: 3px solid var(--c); padding: 28px 22px;
-    position: relative; overflow: hidden; cursor: pointer;
-    transition: all 0.2s; backdrop-filter: blur(8px); min-height: 180px;
-    border: 1px solid rgba(0,212,255,0.06);
-}
-.kpi-btn-inner:hover {
-    background: rgba(10,22,40,0.9); transform: translateX(4px);
-    border-color: rgba(0,212,255,0.15);
-}
-.kpi-bnum {
-    position: absolute; top: -8px; right: 8px;
-    font-family: 'Syne', sans-serif; font-size: 110px; font-weight: 800;
-    color: var(--c); opacity: 0.04; line-height: 1; pointer-events: none;
-}
-.kpi-btitle {
-    font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 600;
-    color: #fff; margin-bottom: 8px; text-align: center;
-}
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
-    color: #7a9cc8; text-align: center; line-height: 1.5;
-}
-.map-btn-inner {
-    background: rgba(10,22,40,0.7); border-radius: 10px;
-    border-left: 3px solid #a855f7; padding: 28px 22px;
-    display: flex; align-items: center; gap: 24px;
-    cursor: pointer; overflow: hidden;
-    backdrop-filter: blur(8px); transition: all 0.2s;
-    border: 1px solid rgba(0,212,255,0.06);
-}
-.map-btn-inner:hover { background: rgba(10,22,40,0.9); transform: translateX(4px); }
-.map-btitle { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 600; color: #fff; }
-.map-btag {
-    font-family: 'JetBrains Mono', monospace; font-size: 10px;
-    color: #a855f7; border: 1px solid rgba(168,85,247,0.3);
-    border-radius: 4px; padding: 3px 10px; margin-right: 6px;
-}
-</style>
-""", unsafe_allow_html=True)
 
 _KPIS = [
-    ("kpi1", "#00d4ff", "01", t("KPI 1 title", lang),  t("KPI 1 desc", lang),  "pages/1_Articles_collectes.py"),
-    ("kpi2", "#a855f7", "02", t("KPI 2 title", lang),  t("KPI 2 desc", lang),  "pages/2_Suivi_des_mots-cles.py"),
-    ("kpi3", "#ef4444", "03", t("KPI 3 title", lang),  t("KPI 3 desc", lang),  "pages/3_Analyse_des_menaces.py"),
-    ("kpi4", "#f59e0b", "04", t("KPI 4 title", lang),  t("KPI 4 desc", lang),  "pages/4_Analyse_des_tendances.py"),
-    ("kpi5", "#22c55e", "05", t("KPI 5 title", lang),  t("KPI 5 desc", lang),  "pages/5_Analyse_des_alertes.py"),
-    ("kpi6", "#14b8a6", "06", t("KPI 6 title", lang),  t("KPI 6 desc", lang),  "pages/6_CVEs.py"),
+    ("kpi1", "#00d4ff", "01", t("KPI 1 title", lang), "pages/1_Articles_collectes.py"),
+    ("kpi2", "#a855f7", "02", t("KPI 2 title", lang), "pages/2_Suivi_des_mots-cles.py"),
+    ("kpi3", "#ef4444", "03", t("KPI 3 title", lang), "pages/3_Analyse_des_menaces.py"),
+    ("kpi4", "#f59e0b", "04", t("KPI 4 title", lang), "pages/4_Analyse_des_tendances.py"),
+    ("kpi5", "#22c55e", "05", t("KPI 5 title", lang), "pages/5_Analyse_des_alertes.py"),
+    ("kpi6", "#14b8a6", "06", t("KPI 6 title", lang), "pages/6_CVEs.py"),
+    ("kpi7", "#a855f7", "07", t("Threat map", lang),  "pages/7_Carte_Menaces.py"),
 ]
 
-col1, col2, col3 = st.columns(3)
-for i, (key, color, num, title, desc, page) in enumerate(_KPIS):
-    col = [col1, col2, col3][i % 3]
-    with col:
-        st.markdown(f"""
-        <div class="kpi-btn-inner" style="--c:{color}">
-            <div class="kpi-bnum">{num}</div>
-            <div class="kpi-btitle">{title}</div>
-            
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button(f"{t('See analysis', lang)} {num}", key=f"btn_{key}", use_container_width=True):
-            st.switch_page(page)
+# 3 colonnes x 3 lignes (7 cartes identiques)
+rows = [_KPIS[0:3], _KPIS[3:6], _KPIS[6:7]]
 
-# ── THREAT MAP CARD ───────────────────────────────────────────────────────────
-st.markdown("<br>", unsafe_allow_html=True)
-col_map1, col_map2, col_map3 = st.columns(3)
-with col_map2:
-    st.markdown(f"""
-    <div class="kpi-btn-inner" style="--c:#a855f7">
-        <div class="kpi-bnum">07</div>
-        <div class="kpi-btitle">&#127758; {t("Threat map", lang)}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    if st.button(t("Open live map", lang), key="btn_map", use_container_width=True):
-        st.switch_page("pages/7_Carte_Menaces.py")
+for row_kpis in rows:
+    cols = st.columns(3)
+    for i, (key, color, num, title, page) in enumerate(row_kpis):
+        with cols[i]:
+            st.markdown(f"""
+            <div class="kpi-card" style="--c:{color}">
+                <div class="kpi-ghost">{num}</div>
+                <div class="kpi-label">{title}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            btn_label = t("Open live map", lang) if key == "kpi7" else f"{t('See analysis', lang)} {num}"
+            if st.button(btn_label, key=f"btn_{key}", use_container_width=True):
+                st.switch_page(page)
