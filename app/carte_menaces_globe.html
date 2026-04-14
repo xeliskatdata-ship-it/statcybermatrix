@@ -46,7 +46,7 @@
     .country-n{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted)}
 
     /* ── GLOBE ── */
-    #globe-container{position:fixed;top:44px;left:0;right:0;bottom:0;z-index:1;cursor:grab}
+    #globe-container{position:fixed;top:44px;left:0;right:0;bottom:0;width:100%;height:calc(100vh - 44px);z-index:1;cursor:grab}
     #globe-container:active{cursor:grabbing}
     #globe-container canvas{display:block}
 
@@ -167,7 +167,9 @@ const layerState = {failles:true,infra:true,editeurs:true,menaces:true};
 // THREE.JS SCENE
 // ================================================================
 const container = document.getElementById('globe-container');
-const W = container.clientWidth, H = container.clientHeight;
+// Dans l'iframe Streamlit, container.clientWidth/Height vaut 0 au chargement
+const W = window.innerWidth || document.documentElement.clientWidth || 1280;
+const H = (window.innerHeight || document.documentElement.clientHeight || 800) - 44;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, W/H, 0.01, 100);
 camera.position.set(0, 0.3, 2.8);
@@ -652,7 +654,8 @@ function animate() {
 // RESIZE
 // ================================================================
 window.addEventListener('resize', () => {
-  const w = container.clientWidth, h = container.clientHeight;
+  const w = window.innerWidth || 1280;
+  const h = (window.innerHeight || 800) - 44;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
