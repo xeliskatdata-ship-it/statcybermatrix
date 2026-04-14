@@ -131,7 +131,7 @@
 // DATA (injected by Python — must be in same script block)
 // ================================================================
 var EVENTS = [
-  {cat:'failles',lat:38.9,lon:-77.0,country:'USA',title:'placeholder',kw:['rce'],severity:'critical',source:'CISA Alerts',org_cible:'',geo_mode:'target',url:'',conf_score:85,conf_label:'forte',ts:null,src_lat:38.9,src_lon:-77.0}
+  {cat:'failles',lat:38.9,lon:-77.0,country:'USA',title:'placeholder',kw:['rce'],severity:'critical',source:'CISA Alerts',org_cible:'',geo_mode:'target',url:'',conf_score:85,conf_label:'forte',ts:null,atk_country:null,atk_lat:null,atk_lon:null}
 ];
 
 // ================================================================
@@ -349,12 +349,12 @@ try {
   }
 
   function createArc(ev){
-    if(ev.geo_mode==='source') return;
-    if(ev.src_lat==null||ev.src_lon==null) return;
-    var start=ll2v(ev.src_lat,ev.src_lon,RADIUS*1.003);
+    // Arc uniquement si un pays attaquant est identifie (APT/attribution)
+    if(ev.atk_lat==null||ev.atk_lon==null) return;
+    var start=ll2v(ev.atk_lat,ev.atk_lon,RADIUS*1.003);
     var end=ll2v(ev.lat,ev.lon,RADIUS*1.003);
     var dist=start.distanceTo(end);
-    if(dist<0.01) return; // same point
+    if(dist<0.01) return;
     var mid=new THREE.Vector3().addVectors(start,end).multiplyScalar(0.5);
     mid.normalize().multiplyScalar(RADIUS+dist*0.5);
     var curve=new THREE.QuadraticBezierCurve3(start,mid,end);
@@ -366,7 +366,7 @@ try {
     _arcGroup.add(line);
     var hm=new THREE.SpriteMaterial({map:spriteTex,color:col,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});
     var head=new THREE.Sprite(hm);
-    head.scale.set(0.025,0.025,1);
+    head.scale.set(0.02,0.02,1);
     _arcGroup.add(head);
     _arcObjects.push({line:line,head:head,ev:ev,curve:curve,phase:Math.random(),speed:0.15+Math.random()*0.2});
   }
@@ -466,6 +466,7 @@ try {
         '<div class="tt-title">'+ev.title+'</div>'+
         '<div class="tt-meta">'+ev.country+' · '+ev.source+' · '+ds+'</div>'+
         (ev.org_cible?'<div class="tt-meta" style="color:#f59e0b;margin-top:2px">Cible : '+ev.org_cible+'</div>':'')+
+        (ev.atk_country?'<div class="tt-meta" style="color:#ef4444;margin-top:2px">Attaquant : '+ev.atk_country+'</div>':'')+
         '<div class="tt-conf"><span class="tt-conf-lbl" style="color:'+confC+'">'+ev.conf_label+'</span><div class="tt-conf-bar"><div class="tt-conf-fill" style="width:'+ev.conf_score+'%;background:'+confC+'"></div></div><span class="tt-conf-lbl" style="color:var(--muted)">'+ev.conf_score+'/100</span></div>'+
         '<div class="tt-kw">'+kws+'</div>';
       tt.classList.add('visible');

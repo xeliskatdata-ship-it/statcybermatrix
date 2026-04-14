@@ -150,7 +150,94 @@ def _context_country(text):
 
 
 # ==============================================================
-# AMELIORATION #3 -- Proximite pays/mot-cle cyber (spaCy)
+# ATTRIBUTION -- APT/groupe -> pays attaquant
+# ==============================================================
+_APT_COUNTRY = {
+    # Russie
+    "fancy bear": "Russie", "apt28": "Russie", "cozy bear": "Russie",
+    "apt29": "Russie", "sandworm": "Russie", "turla": "Russie",
+    "gamaredon": "Russie", "evil corp": "Russie", "nobelium": "Russie",
+    "star blizzard": "Russie", "midnight blizzard": "Russie",
+    "seashell blizzard": "Russie", "ember bear": "Russie",
+    "revil": "Russie", "conti": "Russie", "lockbit": "Russie",
+    "black basta": "Russie", "clop": "Russie", "darkside": "Russie",
+    "blackcat": "Russie", "alphv": "Russie",
+    # Chine
+    "volt typhoon": "Chine", "salt typhoon": "Chine",
+    "flax typhoon": "Chine", "charcoal typhoon": "Chine",
+    "apt41": "Chine", "apt10": "Chine", "apt31": "Chine",
+    "apt40": "Chine", "apt27": "Chine", "hafnium": "Chine",
+    "mustang panda": "Chine", "winnti": "Chine",
+    "backdoor diplomacy": "Chine", "gallium": "Chine",
+    "cicada": "Chine", "bronze starlight": "Chine",
+    "silk typhoon": "Chine", "brass typhoon": "Chine",
+    # Coree du Nord
+    "lazarus": "Coree du Nord", "kimsuky": "Coree du Nord",
+    "apt38": "Coree du Nord", "andariel": "Coree du Nord",
+    "bluenoroff": "Coree du Nord", "sapphire sleet": "Coree du Nord",
+    "citrine sleet": "Coree du Nord", "diamond sleet": "Coree du Nord",
+    "jade sleet": "Coree du Nord",
+    # Iran
+    "charming kitten": "Iran", "apt35": "Iran", "apt33": "Iran",
+    "apt34": "Iran", "muddywater": "Iran", "oilrig": "Iran",
+    "agrius": "Iran", "moses staff": "Iran", "peach sandstorm": "Iran",
+    "mint sandstorm": "Iran", "cotton sandstorm": "Iran",
+    # Autres
+    "scattered spider": "USA", "lapsus$": "UK",
+}
+
+# Coordonnees des pays attaquants
+_ATTACKER_GEO = {
+    "Russie": (55.7, 37.6), "Chine": (39.9, 116.4),
+    "Coree du Nord": (39.0, 125.7), "Iran": (35.7, 51.4),
+    "USA": (37.1, -95.7), "UK": (51.5, -0.1),
+}
+
+# Patterns d'attribution dans le texte
+_ATTRIB_PATTERNS = [
+    r"(?P<country>Russia|Russian|China|Chinese|North\s+Korea|North\s+Korean|Iran|Iranian)[\s\-]+(?:linked|backed|sponsored|affiliated|aligned|nexus|based|state)",
+    r"(?:linked|backed|sponsored|affiliated|attributed)\s+(?:to\s+)?(?P<country>Russia|China|North\s+Korea|Iran|DPRK)",
+    r"(?P<country>Russia|China|North\s+Korea|Iran|DPRK)\s+(?:hackers?|threat\s+actors?|cyber\s+(?:espionage|attack|group|operation))",
+    r"(?:state[\s\-]sponsored|nation[\s\-]state)\s+(?:threat\s+)?(?:actor|group|hacker)s?\s+(?:from|in|based\s+in)\s+(?P<country>Russia|China|North\s+Korea|Iran)",
+    # FR
+    r"(?:attribu|li[eE]|rattach)[eE]e?\s+(?:[aà]\s+la?\s+)?(?P<country>Russie|Chine|Cor[eE]e\s+du\s+Nord|Iran)",
+    r"(?:hackers?|pirates?|groupe)\s+(?P<country>russe|chinois|nord[\s\-]cor[eE]en|iranien)s?",
+]
+
+_COUNTRY_NORMALIZE = {
+    "Russia": "Russie", "Russian": "Russie", "russe": "Russie",
+    "China": "Chine", "Chinese": "Chine", "chinois": "Chine",
+    "North Korea": "Coree du Nord", "North Korean": "Coree du Nord",
+    "DPRK": "Coree du Nord", "nord-coreen": "Coree du Nord",
+    "nord coreen": "Coree du Nord",
+    "Iran": "Iran", "Iranian": "Iran", "iranien": "Iran",
+    "Russie": "Russie", "Chine": "Chine",
+    "Coree du Nord": "Coree du Nord",
+}
+
+def _extract_attacker(title, desc):
+    """Retourne (pays, lat, lon) de l'attaquant si attribution claire, sinon None."""
+    text = (str(title) + " " + str(desc or "")).lower()
+
+    # Passe 1 : recherche APT nommee
+    for apt_name, country in _APT_COUNTRY.items():
+        if apt_name in text:
+            geo = _ATTACKER_GEO.get(country)
+            if geo:
+                return country, geo[0], geo[1]
+
+    # Passe 2 : patterns d'attribution
+    full_text = str(title) + " " + str(desc or "")
+    for pat in _ATTRIB_PATTERNS:
+        m = re.search(pat, full_text, re.IGNORECASE)
+        if m:
+            raw = m.group("country").strip()
+            normalized = _COUNTRY_NORMALIZE.get(raw, raw)
+            geo = _ATTACKER_GEO.get(normalized)
+            if geo:
+                return normalized, geo[0], geo[1]
+
+    return None, None, None
 # ==============================================================
 _CYBER_VICTIM_WORDS = {
     "attacked", "breached", "hacked", "compromised", "targeted", "hit",
@@ -494,8 +581,8 @@ def _build_events(df_json):
         pub_date = row.get("published_date")
         ts = str(pub_date) if pd.notna(pub_date) else None
 
-        # Coordonnees source pour les arcs (source de l'article)
-        _, src_lat, src_lon = SOURCE_GEO[src]
+        # Attribution : extraction du pays attaquant (APT / patterns)
+        atk_country, atk_lat, atk_lon = _extract_attacker(title, desc)
 
         evts.append({
             "cat": layer, "lat": jlat, "lon": jlon, "country": t_country,
@@ -503,7 +590,8 @@ def _build_events(df_json):
             "org_cible": org_cible or "", "geo_mode": geo_mode, "ts": ts,
             "url": str(row.get("url", "") or ""),
             "conf_score": conf_score, "conf_label": conf_label,
-            "src_lat": src_lat, "src_lon": src_lon,
+            "atk_country": atk_country,
+            "atk_lat": atk_lat, "atk_lon": atk_lon,
         })
 
     # Deduplication
@@ -537,7 +625,7 @@ html = map_path.read_text(encoding="utf-8")
 # Inject events data -- escape </ to prevent </script> breaking HTML
 events_js = json.dumps(events, ensure_ascii=True).replace('</', '<\\/')
 # str.replace au lieu de re.sub — evite les problemes de backslash regex
-_EVENTS_PLACEHOLDER = "var EVENTS = [\n  {cat:'failles',lat:38.9,lon:-77.0,country:'USA',title:'placeholder',kw:['rce'],severity:'critical',source:'CISA Alerts',org_cible:'',geo_mode:'target',url:'',conf_score:85,conf_label:'forte',ts:null,src_lat:38.9,src_lon:-77.0}\n];"
+_EVENTS_PLACEHOLDER = "var EVENTS = [\n  {cat:'failles',lat:38.9,lon:-77.0,country:'USA',title:'placeholder',kw:['rce'],severity:'critical',source:'CISA Alerts',org_cible:'',geo_mode:'target',url:'',conf_score:85,conf_label:'forte',ts:null,atk_country:null,atk_lat:null,atk_lon:null}\n];"
 html = html.replace(_EVENTS_PLACEHOLDER, f"var EVENTS = {events_js};")
 
 # Inject nav stats
