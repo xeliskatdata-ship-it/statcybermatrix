@@ -18,7 +18,6 @@ st.set_page_config(page_title="StatCyberMatrix", layout="wide", initial_sidebar_
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sidebar_css import inject_sidebar_css
-inject_sidebar_css()
 from page_theme import inject_theme, PLOTLY_THEME
 inject_theme()
 
@@ -26,6 +25,9 @@ inject_theme()
 if "lang" not in st.session_state:
     st.session_state.lang = "en"
 lang = st.session_state.lang
+
+# Sidebar avec langue
+inject_sidebar_css(lang)
 
 # ── DATA & LOGO ──────────────────────────────────────────────────────────────
 df_k1 = get_mart_k1()

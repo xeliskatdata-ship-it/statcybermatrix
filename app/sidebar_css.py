@@ -1,14 +1,28 @@
-# _sidebar_css.py -- CSS sidebar Option B partage entre toutes les pages
-# Usage dans chaque page : from _sidebar_css import inject_sidebar_css; inject_sidebar_css()
+# sidebar_css.py -- CSS sidebar + i18n EN/FR
+# Usage : from sidebar_css import inject_sidebar_css; inject_sidebar_css(lang)
 
 import streamlit as st
+import streamlit.components.v1 as components
 
-def inject_sidebar_css():
+
+# Mapping nom de fichier -> label traduit
+_NAV_LABELS = {
+    "Accueil":                {"en": "Home",                "fr": "Accueil"},
+    "Articles collectes":     {"en": "Collected articles",  "fr": "Articles collectes"},
+    "Suivi des mots-cles":    {"en": "Keyword tracking",    "fr": "Suivi des mots-cles"},
+    "Analyse des menaces":    {"en": "Threat analysis",     "fr": "Analyse des menaces"},
+    "Analyse des tendances":  {"en": "Trend analysis",      "fr": "Analyse des tendances"},
+    "Analyse des alertes":    {"en": "Alert analysis",      "fr": "Analyse des alertes"},
+    "CVEs":                   {"en": "CVEs",                "fr": "CVEs"},
+    "Carte Menaces":          {"en": "Threat map",          "fr": "Carte Menaces"},
+}
+
+
+def inject_sidebar_css(lang="en"):
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap');
 
-    /* Sidebar background + gradient bar animee */
     [data-testid="stSidebar"] {
         background: #050a14 !important;
         border-right: 1px solid rgba(30,111,255,0.15) !important;
@@ -27,7 +41,6 @@ def inject_sidebar_css():
     }
     [data-testid="stSidebar"] * { color: #7a9cc8 !important; }
 
-    /* Nav links */
     a[data-testid="stSidebarNavLink"] {
         font-family: 'JetBrains Mono', 'Roboto Mono', monospace !important;
         font-size: 0.82rem !important;
@@ -52,11 +65,38 @@ def inject_sidebar_css():
         border-left: 3px solid #a855f7 !important;
     }
 
-    /* Masquer les icones svg */
     a[data-testid="stSidebarNavLink"] svg { display: none !important; }
 
-    /* Separateurs */
     li:has(a[href*="Accueil"]) { border-bottom: 1px solid rgba(30,111,255,0.1) !important; padding-bottom: 8px !important; margin-bottom: 8px !important; }
     li:has(a[href*="Carte"]) { border-top: 1px solid rgba(30,111,255,0.1) !important; padding-top: 8px !important; margin-top: 8px !important; }
     </style>
     """, unsafe_allow_html=True)
+
+    # JS : remplace les labels du sidebar selon la langue
+    import json
+    labels_json = json.dumps({k: v[lang] for k, v in _NAV_LABELS.items()})
+
+    components.html(f"""
+    <script>
+    (function() {{
+        var labels = {labels_json};
+        var p = window.parent.document;
+        function renameLinks() {{
+            var links = p.querySelectorAll('a[data-testid="stSidebarNavLink"] span');
+            links.forEach(function(span) {{
+                var txt = span.textContent.trim();
+                for (var key in labels) {{
+                    if (txt === key || txt === labels[key]) {{
+                        span.textContent = labels[key];
+                        break;
+                    }}
+                }}
+            }});
+        }}
+        renameLinks();
+        // Retry apres le rendu Streamlit
+        setTimeout(renameLinks, 500);
+        setTimeout(renameLinks, 1500);
+    }})();
+    </script>
+    """, height=0)
