@@ -10,6 +10,7 @@ import re
 import random
 import sys
 import os
+from io import StringIO
 
 import pandas as pd
 import streamlit as st
@@ -462,7 +463,7 @@ _JITTER = {
 # ==============================================================
 @st.cache_data(ttl=300, show_spinner="Analyse géographique des articles...")
 def _build_events(df_json):
-    df_local = pd.read_json(df_json)
+    df_local = pd.read_json(StringIO(df_json))
     rng = random.Random(42)
     evts = []
 
