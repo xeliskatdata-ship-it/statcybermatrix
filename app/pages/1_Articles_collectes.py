@@ -16,7 +16,8 @@ st.set_page_config(page_title="StatCyberMatrix - Veille", layout="wide")
 
 # Theme unifie : sidebar + page
 from sidebar_css import inject_sidebar_css
-inject_sidebar_css()
+lang = st.session_state.get("lang", "en")
+inject_sidebar_css(lang)
 from page_theme import inject_theme, PLOTLY_THEME
 inject_theme()
 

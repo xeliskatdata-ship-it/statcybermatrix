@@ -25,6 +25,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# Sidebar style identique aux autres pages
+from sidebar_css import inject_sidebar_css
+lang = st.session_state.get("lang", "en")
+inject_sidebar_css(lang)
+
 st.markdown("""
 <style>
 html, body, .stApp, [data-testid="stAppViewContainer"],
@@ -75,7 +80,6 @@ _FR_SOURCES = {
     "Zataz", "ANSSI", "French Breaches", "CERT-EU",
     "LeMagIT Securite", "No.log",
     "Cybermalveillance", "IT-Connect", "UnderNews", "Cyber-news.fr",
-    "Orange Cyberdefense", "Sekoia Blog",
 }
 
 def _get_nlp(source):
@@ -426,26 +430,6 @@ SOURCE_GEO = {
     "BSI Allemagne": ("Germany", 52.5, 13.4),
     "JPCERT Japon": ("Japan", 35.7, 139.7),
     "Google Security Blog": ("USA", 37.4, -122.1),
-    # Sprint 6 batch 2 -- 19 nouveaux RSS
-    "TechCrunch Security": ("USA", 37.8, -122.4),
-    "Cyber Defense Magazine": ("USA", 37.1, -95.7),
-    "Heimdal Blog": ("Denmark", 55.7, 12.6),
-    "Troy Hunt": ("Australia", -33.9, 151.2),
-    "Bitdefender Labs": ("Romania", 44.4, 26.1),
-    "Volexity Blog": ("USA", 38.9, -77.0),
-    "Rapid7 Blog": ("USA", 42.4, -71.1),
-    "Tenable Blog": ("USA", 39.0, -77.5),
-    "Qualys Blog": ("USA", 37.4, -122.1),
-    "Nozomi Networks": ("USA", 37.4, -122.1),
-    "ZDI Advisories": ("USA", 33.2, -97.1),
-    "AWS Security Blog": ("USA", 47.6, -122.3),
-    "GitHub Security": ("USA", 37.8, -122.4),
-    "Cloudflare Blog": ("USA", 37.8, -122.4),
-    "Europol": ("Netherlands", 52.1, 4.3),
-    "Interpol Cyber": ("France", 45.7, 4.8),
-    "Malware Traffic Analysis": ("USA", 37.1, -95.7),
-    "Orange Cyberdefense": ("France", 48.8, 2.3),
-    "Sekoia Blog": ("France", 48.8, 2.3),
 }
 
 
