@@ -127,10 +127,10 @@
 
   <div id="timeline">
     <span class="tl-lbl">Période</span>
-    <button class="tl-btn active" onclick="setRange(this,'24h')">24h</button>
+    <button class="tl-btn" onclick="setRange(this,'24h')">24h</button>
     <button class="tl-btn" onclick="setRange(this,'7j')">7j</button>
     <button class="tl-btn" onclick="setRange(this,'30j')">30j</button>
-    <button class="tl-btn" onclick="setRange(this,'all')">Tout</button>
+    <button class="tl-btn active" onclick="setRange(this,'all')">Tout</button>
   </div>
 
 <!-- Three.js loaded first -->
@@ -403,11 +403,20 @@ try {
   window.setRange=function(btn,label){
     document.querySelectorAll('.tl-btn').forEach(function(b){b.classList.remove('active')});
     btn.classList.add('active');
-    var now=new Date(),cutoff=null;
-    if(label==='24h')cutoff=new Date(now-24*3600*1000);
-    else if(label==='7j')cutoff=new Date(now-7*24*3600*1000);
-    else if(label==='30j')cutoff=new Date(now-30*24*3600*1000);
-    var f=cutoff?EVENTS.filter(function(e){return e.ts&&new Date(e.ts)>=cutoff}):EVENTS;
+    if(label==='all'){buildVisuals(EVENTS);return;}
+    // Reference = date la plus recente du dataset (pas new Date())
+    var valid=EVENTS.filter(function(e){return e.ts&&e.ts!=='None'&&e.ts!=='NaT'})
+      .map(function(e){return new Date(e.ts.replace(' ','T')).getTime()})
+      .filter(function(t){return !isNaN(t)});
+    var ref=valid.length>0?Math.max.apply(null,valid):Date.now();
+    var hours={24:24*3600000,'7j':7*24*3600000,'30j':30*24*3600000};
+    var delta=label==='24h'?hours[24]:label==='7j'?hours['7j']:hours['30j'];
+    var cutoff=new Date(ref-delta);
+    var f=EVENTS.filter(function(e){
+      if(!e.ts||e.ts==='None'||e.ts==='NaT') return false;
+      var d=new Date(e.ts.replace(' ','T'));
+      return !isNaN(d.getTime())&&d>=cutoff;
+    });
     buildVisuals(f);
   };
 
