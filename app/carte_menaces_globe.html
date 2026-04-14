@@ -149,7 +149,7 @@ var CFG = {
   editeurs: {color:'#f59e0b',label:'Éditeurs critiques'},
   menaces:  {color:'#a855f7',label:'Groupes & APT'}
 };
-var SEV_SIZE = {critical:0.018, high:0.013, medium:0.01, low:0.007};
+var SEV_SIZE = {critical:0.012, high:0.009, medium:0.007, low:0.005};
 
 var _dbg = document.getElementById('debug-overlay');
 function dbg(msg){ if(_dbg) _dbg.textContent = msg; }
@@ -325,14 +325,21 @@ try {
   function createMarker(ev){
     var pos=ll2v(ev.lat,ev.lon,RADIUS*1.005);
     var col=new THREE.Color(CFG[ev.cat].color);
-    var sz=SEV_SIZE[ev.severity]||0.01;
-    var dg=new THREE.SphereGeometry(sz*0.5,8,8);
-    var dm=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.9});
+    var sz=SEV_SIZE[ev.severity]||0.007;
+    // Fallback (source) markers are smaller and dimmer
+    var isFallback = ev.geo_mode==='source';
+    var dotScale = isFallback ? 0.3 : 0.5;
+    var dotOpacity = isFallback ? 0.4 : 0.9;
+    var glowOpacity = isFallback ? 0.15 : 0.45;
+    var glowScale = isFallback ? sz*1.5 : sz*2.5;
+
+    var dg=new THREE.SphereGeometry(sz*dotScale,6,6);
+    var dm=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:dotOpacity});
     var dot=new THREE.Mesh(dg,dm);
     dot.position.copy(pos);
-    var sm=new THREE.SpriteMaterial({map:spriteTex,color:col,transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false});
+    var sm=new THREE.SpriteMaterial({map:spriteTex,color:col,transparent:true,opacity:glowOpacity,blending:THREE.AdditiveBlending,depthWrite:false});
     var sp=new THREE.Sprite(sm);
-    sp.scale.set(sz*4,sz*4,1);
+    sp.scale.set(glowScale,glowScale,1);
     sp.position.copy(pos);
     var g=new THREE.Group();
     g.add(dot); g.add(sp);
