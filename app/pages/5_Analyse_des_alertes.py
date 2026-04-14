@@ -77,7 +77,10 @@ with col_l:
     fig_heat = px.imshow(pivot_df, color_continuous_scale=['#050a14', '#3b82f6', '#a855f7', '#00d4ff'], aspect="auto")
     fig_heat.update_xaxes(tickformat="%d/%m/%y")
     fig_heat.update_traces(hovertemplate="Date: %{x|%d/%m/%Y}<br>Catégorie: %{y}<br>Alertes: %{z}<extra></extra>")
-    fig_heat.update_layout(margin=dict(t=10, b=20, l=10, r=10), **PLOTLY_THEME)
+    fig_heat.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(5,10,20,0.4)",
+        font=dict(family="JetBrains Mono", size=11, color="#c8d6e5"),
+        margin=dict(t=10, b=20, l=10, r=10))
     st.plotly_chart(fig_heat, use_container_width=True)
 
 with col_r:
@@ -91,7 +94,8 @@ with col_r:
     fig_radar.update_layout(
         polar=dict(bgcolor="rgba(5,10,20,0.4)", radialaxis=dict(visible=True, gridcolor="rgba(0,212,255,0.08)"),
                    angularaxis=dict(gridcolor="rgba(0,212,255,0.08)")),
-        height=400, margin=dict(t=30, b=20, l=10, r=10), **PLOTLY_THEME
+        height=400, margin=dict(t=30, b=20, l=10, r=10),
+        paper_bgcolor="rgba(0,0,0,0)", font=dict(family="JetBrains Mono", size=11, color="#c8d6e5")
     )
     st.plotly_chart(fig_radar, use_container_width=True)
 

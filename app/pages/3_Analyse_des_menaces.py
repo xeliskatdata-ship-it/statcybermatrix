@@ -62,7 +62,9 @@ with col2:
         ))
         fig_radar.update_layout(
             polar=dict(bgcolor='rgba(5,10,20,0.4)', radialaxis=dict(visible=False)),
-            showlegend=False, height=300, margin=dict(t=30, b=30), **PLOTLY_THEME
+            showlegend=False, height=300,
+            paper_bgcolor="rgba(0,0,0,0)", font=dict(family="JetBrains Mono", size=11, color="#c8d6e5"),
+            margin=dict(t=30, b=30, l=10, r=10)
         )
         st.plotly_chart(fig_radar, use_container_width=True)
 
@@ -90,7 +92,10 @@ if not df.empty:
         color_continuous_scale=['#050a14', '#3b82f6', '#a855f7', '#00d4ff'],
         aspect="auto"
     )
-    fig_heat.update_layout(height=600, xaxis=dict(side="top"), margin=dict(t=100, b=50, l=50, r=50), **PLOTLY_THEME)
+    fig_heat.update_layout(height=600, xaxis=dict(side="top"),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(5,10,20,0.4)",
+        font=dict(family="JetBrains Mono", size=12, color="#c8d6e5"),
+        margin=dict(t=100, b=50, l=50, r=50))
     if len(pivot.index) < 20:
         fig_heat.update_traces(text=pivot.values, texttemplate="%{text}")
     st.plotly_chart(fig_heat, use_container_width=True)
