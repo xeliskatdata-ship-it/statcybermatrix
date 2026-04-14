@@ -1,4 +1,4 @@
-# 4_Analyse_des_tendances.py -- StatCyberMatrix theme unifie
+# 4_Analyse_des_tendances.py -- StatCyberMatrix i18n
 
 import sys, os
 import streamlit as st
@@ -20,33 +20,19 @@ inject_sidebar_css(lang)
 from page_theme import inject_theme, PLOTLY_THEME
 inject_theme()
 
-# CSS complementaire pour cette page
 st.markdown("""
 <style>
 .alert-highlight {
-    background: rgba(239,68,68,0.08);
-    border: 1px solid rgba(239,68,68,0.4);
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.4);
     border-radius: 6px; padding: 14px; margin-top: 12px;
     font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #c8d6e5;
 }
-.custom-table {
-    width: 100%; border-collapse: collapse; margin: 16px 0;
-    font-family: 'JetBrains Mono', monospace;
-    background: rgba(10,22,40,0.6); border-radius: 8px; overflow: hidden;
-    border: 1px solid rgba(0,212,255,0.1);
-}
-.custom-table th {
-    background: rgba(0,212,255,0.06); color: #00d4ff; text-align: left;
-    padding: 10px 14px; border-bottom: 1px solid rgba(0,212,255,0.15);
-    text-transform: uppercase; letter-spacing: 1px; font-size: 0.72rem;
-}
-.custom-table td {
-    padding: 10px 14px; border-bottom: 1px solid rgba(0,212,255,0.04);
-    color: #c8d6e5; font-size: 0.78rem;
-}
-.status-crit { color: #ef4444; font-weight: 600; }
-.status-warn { color: #f59e0b; }
-.status-ok { color: #22c55e; }
+.custom-table { width:100%; border-collapse:collapse; margin:16px 0; font-family:'JetBrains Mono',monospace; background:rgba(10,22,40,0.6); border-radius:8px; overflow:hidden; border:1px solid rgba(0,212,255,0.1); }
+.custom-table th { background:rgba(0,212,255,0.06); color:#00d4ff; text-align:left; padding:10px 14px; border-bottom:1px solid rgba(0,212,255,0.15); text-transform:uppercase; letter-spacing:1px; font-size:0.72rem; }
+.custom-table td { padding:10px 14px; border-bottom:1px solid rgba(0,212,255,0.04); color:#c8d6e5; font-size:0.78rem; }
+.status-crit { color:#ef4444; font-weight:600; }
+.status-warn { color:#f59e0b; }
+.status-ok { color:#22c55e; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,25 +42,35 @@ try:
     if not df_mart.empty:
         df_mart['published_date'] = pd.to_datetime(df_mart['published_date']).dt.normalize()
 except Exception as e:
-    st.error(f"Erreur technique : {e}"); st.stop()
+    st.error(f"Technical error: {e}"); st.stop()
+
+_sb_title = {"en": "### Threat analysis", "fr": "### Analyse de menaces"}
+_sb_window = {"en": "Observation window", "fr": "Fenetre d'observation"}
+_sb_periods = {"en": ["Last 7 days", "Last 14 days", "Last 30 days"], "fr": ["7 derniers jours", "14 derniers jours", "30 derniers jours"]}
+_sb_target = {"en": "Target vector", "fr": "Vecteur cible"}
+_sb_all = {"en": "All", "fr": "Tout"}
 
 with st.sidebar:
-    st.markdown("### Analyse de Menaces")
-    choix_temps = st.selectbox("Fenetre d'observation", ["7 derniers jours", "14 derniers jours", "30 derniers jours"], index=1)
-    nb_jours = int(choix_temps.split()[0])
+    st.markdown(_sb_title[lang])
+    idx = st.selectbox(_sb_window[lang], options=range(3), format_func=lambda i: _sb_periods[lang][i], index=1)
+    nb_jours = [7, 14, 30][idx]
     cats_brutes = sorted(df_mart['category'].unique().tolist()) if not df_mart.empty else []
-    cats_dispo = ["Tout"] + cats_brutes
-    target = st.selectbox("Vecteur cible", cats_dispo)
+    cats_dispo = [_sb_all[lang]] + cats_brutes
+    target = st.selectbox(_sb_target[lang], cats_dispo)
+
+is_all = target in (_sb_all["en"], _sb_all["fr"])
 
 if not df_mart.empty:
     date_limite = df_mart['published_date'].max() - timedelta(days=nb_jours)
     df_filtered = df_mart[df_mart['published_date'] >= date_limite].copy()
 
-    st.markdown('<div class="page-title">Analyse des Tendances CTI</div>', unsafe_allow_html=True)
+    _page_title = {"en": "CTI trend analysis", "fr": "Analyse des tendances CTI"}
+    st.markdown(f'<div class="page-title">{_page_title[lang]}</div>', unsafe_allow_html=True)
 
-    st.markdown(f'<div class="section-title">Indice d\'accélération (Z-Score) — {target}</div>', unsafe_allow_html=True)
+    _zscore_title = {"en": f"Acceleration index (Z-Score) — {target}", "fr": f"Indice d'acceleration (Z-Score) — {target}"}
+    st.markdown(f'<div class="section-title">{_zscore_title[lang]}</div>', unsafe_allow_html=True)
 
-    if target == "Tout":
+    if is_all:
         data_trend = df_filtered.groupby('published_date')['nb_mentions'].sum().reset_index()
     else:
         data_trend = df_filtered[df_filtered['category'] == target].groupby('published_date')['nb_mentions'].sum().reset_index()
@@ -90,55 +86,71 @@ if not df_mart.empty:
         vol_pic = int(top_emergence['nb_mentions'])
         bond_percent = ((vol_pic - mean_val) / mean_val * 100) if mean_val > 0 else 0
 
-        fig_radar = px.scatter(data_trend, x='nb_mentions', y='z_score', size='nb_mentions', color='z_score',
-                               text=data_trend['published_date'].dt.strftime('%d/%m'),
-                               color_continuous_scale=['#050a14', '#a855f7', '#00d4ff'], height=450)
-        fig_radar.add_hline(y=2.0, line_dash="dash", line_color="#ef4444",
-                            annotation_text="Seuil anomalie", annotation=dict(font_color="#ef4444", font_size=10))
-        fig_radar.update_traces(textfont=dict(size=10, color="#c8d6e5"))
-        fig_radar.update_layout(**PLOTLY_THEME)
-        st.plotly_chart(fig_radar, use_container_width=True)
+        _anomaly = {"en": "Anomaly threshold", "fr": "Seuil anomalie"}
+        fig = px.scatter(data_trend, x='nb_mentions', y='z_score', size='nb_mentions', color='z_score',
+            text=data_trend['published_date'].dt.strftime('%d/%m'),
+            color_continuous_scale=['#050a14', '#a855f7', '#00d4ff'], height=450)
+        fig.add_hline(y=2.0, line_dash="dash", line_color="#ef4444",
+            annotation_text=_anomaly[lang], annotation=dict(font_color="#ef4444", font_size=10))
+        fig.update_traces(textfont=dict(size=10, color="#c8d6e5"))
+        fig.update_layout(**PLOTLY_THEME)
+        st.plotly_chart(fig, use_container_width=True)
 
-        status = "CRITIQUE" if top_emergence['z_score'] > 2 else "STABLE"
+        status = "CRITICAL" if top_emergence['z_score'] > 2 else "STABLE"
         color_status = "#ef4444" if top_emergence['z_score'] > 2 else "#22c55e"
-        target_display = "tous vecteurs confondus" if target == "Tout" else f"la catégorie <b>{target}</b>"
-        verbe_aux = "ont été" if vol_pic > 1 else "a été"
-        participe_acc = "identifiées" if vol_pic > 1 else "identifiée"
-        mot_mention = "mentions" if vol_pic > 1 else "mention"
 
+        if lang == "en":
+            mentions_w = "mentions" if vol_pic > 1 else "mention"
+            target_d = "all vectors combined" if is_all else f"the <b>{target}</b> category"
+            _alert_html = f"""On <b>{date_pic_str}</b>, a volume of <b>{vol_pic} {mentions_w}</b> was identified. This represents a <b>{bond_percent:.1f}%</b> surge compared to normal activity for {target_d}."""
+        else:
+            mentions_w = "mentions" if vol_pic > 1 else "mention"
+            v_aux = "ont ete" if vol_pic > 1 else "a ete"
+            p_acc = "identifiees" if vol_pic > 1 else "identifiee"
+            target_d = "tous vecteurs confondus" if is_all else f"la categorie <b>{target}</b>"
+            _alert_html = f"""Le <b>{date_pic_str}</b>, un volume de <b>{vol_pic} {mentions_w}</b> {v_aux} {p_acc}. Cela represente un bond de <b>{bond_percent:.1f}%</b> par rapport a l'activite habituelle pour {target_d}."""
+
+        _sig = {"en": "Signal status:", "fr": "Etat du signal :"}
         st.markdown(f"""
         <div class="insight-box">
-            <b>Etat du signal :</b> <span style="color:{color_status}; font-weight:600;">{status}</span> (Score Z : {top_emergence['z_score']:.2f})
-            <div class="alert-highlight">
-                Le <b>{date_pic_str}</b>, un volume de <b>{vol_pic} {mot_mention}</b> {verbe_aux} {participe_acc}.
-                Cela représente un bond de <b>{bond_percent:.1f}%</b> par rapport a l'activite habituelle pour {target_display}.
-            </div>
+            <b>{_sig[lang]}</b> <span style="color:{color_status};font-weight:600;">{status}</span> (Z-Score: {top_emergence['z_score']:.2f})
+            <div class="alert-highlight">{_alert_html}</div>
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("""
+        _tbl_zscore = {"en": "Z-Score value", "fr": "Valeur Z-Score"}
+        _tbl_meaning = {"en": "Meaning for consultants", "fr": "Signification pour le consultant"}
+        _tbl_normal = {"en": "Normal activity", "fr": "Activite normale"}
+        _tbl_calm = {"en": "(flat calm)", "fr": "(calme plat)"}
+        _tbl_watch = {"en": "Watchfulness", "fr": "Vigilance"}
+        _tbl_noise = {"en": ": background noise slightly increasing", "fr": ": bruit de fond en legere augmentation"}
+        _tbl_anom = {"en": "ANOMALY", "fr": "ANOMALIE"}
+        _tbl_strong = {"en": ": strong signal of a critical attack", "fr": ": signal fort d'une attaque critique"}
+
+        st.markdown(f"""
         <table class="custom-table">
-            <thead><tr><th>Valeur Z-Score</th><th>Signification pour le Consultant</th></tr></thead>
+            <thead><tr><th>{_tbl_zscore[lang]}</th><th>{_tbl_meaning[lang]}</th></tr></thead>
             <tbody>
-                <tr><td>0</td><td><span class="status-ok">Activité normale</span> (calme plat)</td></tr>
-                <tr><td>1 à 2</td><td><span class="status-warn">Vigilance</span> : bruit de fond en légère augmentation</td></tr>
-                <tr><td>> 2</td><td><span class="status-crit">ANOMALIE</span> : Signal fort d'une attaque critique</td></tr>
+                <tr><td>0</td><td><span class="status-ok">{_tbl_normal[lang]}</span> {_tbl_calm[lang]}</td></tr>
+                <tr><td>1 — 2</td><td><span class="status-warn">{_tbl_watch[lang]}</span>{_tbl_noise[lang]}</td></tr>
+                <tr><td>> 2</td><td><span class="status-crit">{_tbl_anom[lang]}</span>{_tbl_strong[lang]}</td></tr>
             </tbody>
         </table>
         """, unsafe_allow_html=True)
 
-        st.markdown(f'<div class="section-title">Sources au {date_pic_str} ({target})</div>', unsafe_allow_html=True)
+        _src_title = {"en": f"Sources on {date_pic_str} ({target})", "fr": f"Sources au {date_pic_str} ({target})"}
+        st.markdown(f'<div class="section-title">{_src_title[lang]}</div>', unsafe_allow_html=True)
         try:
             df_articles = get_stg_articles(limit=2000)
             df_articles['published_date'] = pd.to_datetime(df_articles['published_date']).dt.normalize()
-            if target == "Tout":
+            if is_all:
                 sources_pic = df_articles[df_articles['published_date'] == raw_date_pic]
             else:
                 sources_pic = df_articles[(df_articles['published_date'] == raw_date_pic) & (df_articles['category'] == target)]
             if not sources_pic.empty:
                 for _, row in sources_pic.iterrows():
                     url_val = row.get('url', '#')
-                    cat_info = f" [{row['category']}]" if target == "Tout" else ""
+                    cat_info = f" [{row['category']}]" if is_all else ""
                     st.markdown(f"""
                     <div class="article-card">
                         <a href="{url_val}" target="_blank">{row['title']}{cat_info}</a>
@@ -146,6 +158,8 @@ if not df_mart.empty:
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info("Aucun détail de source disponible.")
+                _no = {"en": "No source details available.", "fr": "Aucun detail de source disponible."}
+                st.info(_no[lang])
         except:
-            st.warning("Erreur lors de la récupération des sources détaillées.")
+            _err = {"en": "Error retrieving detailed sources.", "fr": "Erreur lors de la recuperation des sources detaillees."}
+            st.warning(_err[lang])
