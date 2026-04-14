@@ -17,13 +17,13 @@
     @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.4)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
     @keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-    nav{position:fixed;top:0;left:0;right:0;height:44px;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(5,10,20,0.9);border-bottom:1px solid var(--border);backdrop-filter:blur(16px)}
-    .nav-logo{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--cyan);display:flex;align-items:center;gap:8px}
-    .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
-    .nav-stats{display:flex;gap:18px;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted)}
+    nav{position:fixed;top:0;left:0;right:0;height:34px;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(5,10,20,0.9);border-bottom:1px solid var(--border);backdrop-filter:blur(16px)}
+    .nav-logo{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--cyan);display:flex;align-items:center;gap:8px}
+    .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+    .nav-stats{display:flex;gap:14px;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted)}
     .nav-stats strong{color:var(--text)}
 
-    #sidebar{position:fixed;top:44px;left:0;bottom:0;width:280px;z-index:800;background:rgba(5,10,20,0.88);border-right:1px solid var(--border);backdrop-filter:blur(16px);overflow-y:auto;display:flex;flex-direction:column;animation:fadeInUp .5s ease}
+    #sidebar{position:fixed;top:34px;left:0;bottom:0;width:280px;z-index:800;background:rgba(5,10,20,0.88);border-right:1px solid var(--border);backdrop-filter:blur(16px);overflow-y:auto;display:flex;flex-direction:column;animation:fadeInUp .5s ease}
     #sidebar::-webkit-scrollbar{width:3px}
     #sidebar::-webkit-scrollbar-thumb{background:var(--blue);border-radius:3px}
     .sb-section{padding:10px 14px;border-bottom:1px solid var(--border)}
@@ -42,7 +42,7 @@
     .country-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0}
     .country-n{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted)}
 
-    #globe-container{position:fixed;top:44px;left:0;right:0;bottom:0;z-index:1;cursor:grab;overflow:hidden}
+    #globe-container{position:fixed;top:34px;left:0;right:0;bottom:0;z-index:1;cursor:grab;overflow:hidden}
     #globe-container:active{cursor:grabbing}
     #globe-container canvas{display:block;width:100%!important;height:100%!important}
 
@@ -67,11 +67,6 @@
     .tt-conf-bar{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.1)}
     .tt-conf-fill{height:100%;border-radius:2px}
     .tt-conf-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;white-space:nowrap}
-
-    #timeline{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:800;background:rgba(10,22,40,0.85);border:1px solid var(--border);border-radius:8px;padding:6px 14px;backdrop-filter:blur(12px);display:flex;align-items:center;gap:10px;animation:fadeInUp .6s ease .4s both}
-    .tl-lbl{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted)}
-    .tl-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:3px 10px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s}
-    .tl-btn.active,.tl-btn:hover{background:rgba(30,111,255,.2);color:var(--text);border-color:var(--blue)}
 
     /* Debug / loading */
     #debug-overlay{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--cyan);text-align:center}
@@ -125,13 +120,7 @@
     <div class="leg-row"><div class="leg-dot" style="width:5px;height:5px;background:#3b82f6;box-shadow:0 0 3px #3b82f6"></div>Faible</div>
   </div>
 
-  <div id="timeline">
-    <span class="tl-lbl">Période</span>
-    <button class="tl-btn" onclick="setRange(this,'24h')">24h</button>
-    <button class="tl-btn" onclick="setRange(this,'7j')">7j</button>
-    <button class="tl-btn" onclick="setRange(this,'30j')">30j</button>
-    <button class="tl-btn active" onclick="setRange(this,'all')">Tout</button>
-  </div>
+  <!-- Timeline removed — always show all events -->
 
 <!-- Three.js loaded first -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -176,9 +165,9 @@ try {
   var container = document.getElementById('globe-container');
   var rect = container.getBoundingClientRect();
   var W = rect.width  || window.innerWidth  || 1280;
-  var H = rect.height || window.innerHeight - 44 || 700;
+  var H = rect.height || window.innerHeight - 34 || 700;
   if(W < 100) W = window.innerWidth || 1280;
-  if(H < 100) H = (window.innerHeight || 800) - 44;
+  if(H < 100) H = (window.innerHeight || 800) - 34;
 
   dbg('Canvas: ' + W + 'x' + H);
 
@@ -233,32 +222,42 @@ try {
     [[60,-44],[62,-42],[65,-40],[68,-30],[72,-22],[76,-20],[78,-22],[80,-30],[82,-35],[83,-42],[82,-52],[78,-58],[75,-60],[72,-58],[68,-52],[65,-50],[62,-48],[60,-44]],
   ];
 
-  // Draw continents -- filled + outlined
+  // Draw continents -- filled + outlined + glow
   continents.forEach(function(pts){
     tx.beginPath();
     tx.moveTo(gx(pts[0][1]),gy(pts[0][0]));
     for(var i=1;i<pts.length;i++) tx.lineTo(gx(pts[i][1]),gy(pts[i][0]));
     tx.closePath();
-    tx.fillStyle='rgba(14,26,52,1)'; // land slightly lighter than ocean
+    tx.fillStyle='rgba(20,40,75,1)'; // land visibly lighter than ocean
     tx.fill();
-    tx.strokeStyle='rgba(30,111,255,0.25)';
-    tx.lineWidth=1.5;
+    tx.strokeStyle='rgba(50,140,255,0.5)';
+    tx.lineWidth=2;
+    tx.stroke();
+  });
+  // Second pass — inner glow on coastlines
+  continents.forEach(function(pts){
+    tx.beginPath();
+    tx.moveTo(gx(pts[0][1]),gy(pts[0][0]));
+    for(var i=1;i<pts.length;i++) tx.lineTo(gx(pts[i][1]),gy(pts[i][0]));
+    tx.closePath();
+    tx.strokeStyle='rgba(0,180,255,0.15)';
+    tx.lineWidth=6;
     tx.stroke();
   });
 
   // Subtle grid lines
-  tx.strokeStyle = 'rgba(30,111,255,0.04)';
+  tx.strokeStyle = 'rgba(30,111,255,0.08)';
   tx.lineWidth = 0.5;
   for(var lat=-80;lat<=80;lat+=20){var y=gy(lat);tx.beginPath();tx.moveTo(0,y);tx.lineTo(2048,y);tx.stroke();}
   for(var lon=-180;lon<180;lon+=30){var x=gx(lon);tx.beginPath();tx.moveTo(x,0);tx.lineTo(x,1024);tx.stroke();}
 
-  // Dot grid on land areas (gives digital feel)
-  tx.fillStyle='rgba(30,111,255,0.07)';
+  // Dot grid (gives digital feel)
+  tx.fillStyle='rgba(40,130,255,0.1)';
   for(var la=-85;la<=85;la+=3){for(var lo=-180;lo<180;lo+=3){var px=gx(lo);var py=gy(la);tx.beginPath();tx.arc(px,py,0.8,0,6.28);tx.fill();}}
 
   var earthTex = new THREE.CanvasTexture(tc);
   _earth = new THREE.Mesh(earthGeo, new THREE.MeshPhongMaterial({
-    map: earthTex, color: 0x1a2a4a, emissive: 0x050a14, emissiveIntensity: 0.3, shininess: 5
+    map: earthTex, color: 0x4477aa, emissive: 0x0a1628, emissiveIntensity: 0.5, shininess: 8
   }));
   _scene.add(_earth);
 
@@ -502,19 +501,14 @@ try {
 
   // ── RESIZE ──
   window.addEventListener('resize',function(){
-    var w=window.innerWidth||1280, h=(window.innerHeight||800)-44;
+    var w=window.innerWidth||1280, h=(window.innerHeight||800)-34;
     _camera.aspect=w/h;
     _camera.updateProjectionMatrix();
     _renderer.setSize(w,h);
   });
 
-  // ── GO -- apply default time filter (24h) ──
-  var defaultBtn = document.querySelector('.tl-btn.active');
-  if(defaultBtn) {
-    window.setRange(defaultBtn, defaultBtn.textContent.trim());
-  } else {
-    buildVisuals(EVENTS);
-  }
+  // ── GO -- always show all events ──
+  buildVisuals(EVENTS);
   animate();
 
   // Hide debug overlay
