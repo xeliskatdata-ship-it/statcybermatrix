@@ -536,11 +536,9 @@ html = map_path.read_text(encoding="utf-8")
 # Inject events data
 # Inject events data -- escape </ to prevent </script> breaking HTML
 events_js = json.dumps(events, ensure_ascii=True).replace('</', '<\\/')
-html = re.sub(
-    r"var EVENTS\s*=\s*\[.*?\];",
-    f"var EVENTS = {events_js};",
-    html, flags=re.DOTALL,
-)
+# str.replace au lieu de re.sub — evite les problemes de backslash regex
+_EVENTS_PLACEHOLDER = "var EVENTS = [\n  {cat:'failles',lat:38.9,lon:-77.0,country:'USA',title:'placeholder',kw:['rce'],severity:'critical',source:'CISA Alerts',org_cible:'',geo_mode:'target',url:'',conf_score:85,conf_label:'forte',ts:null,src_lat:38.9,src_lon:-77.0}\n];"
+html = html.replace(_EVENTS_PLACEHOLDER, f"var EVENTS = {events_js};")
 
 # Inject nav stats
 html = re.sub(r'id="n-events">[^<]+', f'id="n-events">{n_events}', html)
