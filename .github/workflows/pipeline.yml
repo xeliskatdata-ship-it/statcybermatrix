@@ -32,6 +32,7 @@ jobs:
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
           OTX_API_KEY: ${{ secrets.OTX_API_KEY }}
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          ABUSECH_AUTH_KEY: ${{ secrets.ABUSECH_AUTH_KEY }}
         run: python src/acquisition.py
 
       - name: Run cleaning
