@@ -25,7 +25,7 @@ if "lang" not in st.session_state:
 
 # ── DATA & LOGO ──────────────────────────────────────────────────────────────
 df_k1 = get_mart_k1()
-df_articles = get_stg_articles(limit=500)
+df_articles = get_stg_articles(limit=5000)
 total_articles = int(df_k1["nb_articles"].sum()) if not df_k1.empty else 0
 nb_sources = df_k1["source"].nunique() if not df_k1.empty else 0
 
@@ -105,78 +105,26 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── MAIN METRICS (animated counters) ──────────────────────────────────────────
-components.html(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-body {{ background:transparent; margin:0; }}
-.cards {{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }}
-.card {{
-    background:rgba(10,22,40,0.75);
-    border:1px solid rgba(0,212,255,0.12);
-    border-radius:12px;
-    padding:28px 24px;
-    text-align:center;
-    position:relative;
-    overflow:hidden;
-}}
-.card::after {{
-    content:'';
-    position:absolute; bottom:0; left:0; right:0; height:3px;
-    background:var(--bar);
-    transform:scaleX(0); transform-origin:left;
-    animation:barFill 1.8s ease-out 0.3s forwards;
-}}
-@keyframes barFill {{ to {{ transform:scaleX(1); }} }}
-.label {{
-    font-family:'JetBrains Mono',monospace;
-    font-size:10px; color:#7a9cc8;
-    letter-spacing:2.5px; text-transform:uppercase;
-    margin-bottom:10px;
-}}
-.counter {{
-    font-family:'Syne',sans-serif;
-    font-size:56px; font-weight:800;
-    color:var(--c);
-    line-height:1;
-    text-shadow:0 0 30px var(--glow);
-}}
-</style>
-<div class="cards">
-    <div class="card" style="--bar:linear-gradient(90deg,#00d4ff,#3b82f6);--c:#00d4ff;--glow:rgba(0,212,255,0.3)">
-        <div class="label">{t("Articles collected", lang).upper()}</div>
-        <div class="counter" id="cnt-articles">0</div>
+# ── MAIN METRICS ──────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+    <div style="background:rgba(10,22,40,0.75);border:1px solid rgba(0,212,255,0.12);border-radius:12px;padding:28px;text-align:center;border-bottom:3px solid #00d4ff;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a9cc8;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px;">{t("Articles collected", lang).upper()}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:56px;font-weight:800;color:#00d4ff;line-height:1;text-shadow:0 0 30px rgba(0,212,255,0.3);">{total_articles:,}</div>
     </div>
-    <div class="card" style="--bar:linear-gradient(90deg,#a855f7,#ec4899);--c:#a855f7;--glow:rgba(168,85,247,0.3)">
-        <div class="label">{t("Active sources", lang).upper()}</div>
-        <div class="counter" id="cnt-sources">0</div>
+    <div style="background:rgba(10,22,40,0.75);border:1px solid rgba(168,85,247,0.12);border-radius:12px;padding:28px;text-align:center;border-bottom:3px solid #a855f7;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#7a9cc8;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px;">{t("Active sources", lang).upper()}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:56px;font-weight:800;color:#a855f7;line-height:1;text-shadow:0 0 30px rgba(168,85,247,0.3);">{nb_sources}</div>
     </div>
 </div>
-<script>
-function animCount(id, target, dur) {{
-    var el = document.getElementById(id);
-    var start = 0, startTime = null;
-    function step(ts) {{
-        if (!startTime) startTime = ts;
-        var p = Math.min((ts - startTime) / dur, 1);
-        var ease = 1 - Math.pow(1 - p, 3);
-        el.textContent = Math.floor(ease * target).toLocaleString('fr-FR');
-        if (p < 1) requestAnimationFrame(step);
-        else el.textContent = target.toLocaleString('fr-FR');
-    }}
-    requestAnimationFrame(step);
-}}
-animCount('cnt-articles', {total_articles}, 2000);
-animCount('cnt-sources', {nb_sources}, 1500);
-</script>
-""", height=160)
+""", unsafe_allow_html=True)
 
 # ── RECENT TABLE ──────────────────────────────────────────────────────────────
 if not df_articles.empty:
     df_articles['published_date'] = pd.to_datetime(df_articles['published_date']).dt.strftime('%Y-%m-%d')
     st.dataframe(
-        df_articles[["source", "title", "published_date"]].head(10),
-        use_container_width=True, hide_index=True,
+        df_articles[["source", "title", "published_date"]],
+        use_container_width=True, hide_index=True, height=500,
         column_config={"source": t("Sources", lang), "title": "Title",
                        "published_date": st.column_config.TextColumn("Date", width="small")}
     )
