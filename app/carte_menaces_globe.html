@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StatCyberMatrix — Globe de veille cyber</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;overflow:hidden;background:#050a14;font-family:'Syne',sans-serif;color:#e8f0fe}
+    :root{
+      --bg:#050a14;--bg2:#0a1628;--bg3:#0f1f35;
+      --blue:#1e6fff;--cyan:#00d4ff;--green:#22c55e;
+      --text:#e8f0fe;--muted:#7a9cc8;--border:rgba(30,111,255,0.15);
+      --red:#ef4444;--orange:#f97316;--amber:#f59e0b;--purple:#a855f7;
+    }
+    @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,0.4)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── NAV ── */
+    nav{position:fixed;top:0;left:0;right:0;height:44px;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(5,10,20,0.9);border-bottom:1px solid var(--border);backdrop-filter:blur(16px)}
+    .nav-logo{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--cyan);display:flex;align-items:center;gap:8px}
+    .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;flex-shrink:0}
+    .nav-stats{display:flex;gap:18px;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--muted)}
+    .nav-stats strong{color:var(--text)}
+
+    /* ── SIDEBAR ── */
+    #sidebar{position:fixed;top:44px;left:0;bottom:0;width:280px;z-index:800;background:rgba(5,10,20,0.88);border-right:1px solid var(--border);backdrop-filter:blur(16px);overflow-y:auto;display:flex;flex-direction:column;animation:fadeInUp .5s ease}
+    #sidebar::-webkit-scrollbar{width:3px}
+    #sidebar::-webkit-scrollbar-thumb{background:var(--blue);border-radius:3px}
+    .sb-section{padding:10px 14px;border-bottom:1px solid var(--border)}
+    .sb-title{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    .layer-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;cursor:pointer;transition:opacity .2s}
+    .layer-row:hover{opacity:.85}
+    .layer-left{display:flex;align-items:center;gap:7px}
+    .layer-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .layer-name{font-size:.78rem;font-weight:600}
+    .layer-count{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted)}
+    .toggle{width:28px;height:15px;border-radius:8px;background:var(--blue);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+    .toggle.off{background:rgba(255,255,255,.1)}
+    .toggle::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:transform .2s}
+    .toggle.on::after{transform:translateX(13px)}
+    .src-item{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--muted);padding:1px 0;line-height:1.5}
+    .country-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0}
+    .country-n{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted)}
+
+    /* ── GLOBE ── */
+    #globe-container{position:fixed;top:44px;left:0;right:0;bottom:0;z-index:1;cursor:grab}
+    #globe-container:active{cursor:grabbing}
+    #globe-container canvas{display:block}
+
+    /* ── STATS OVERLAY (bottom-right) ── */
+    #stats-overlay{position:fixed;bottom:20px;right:20px;z-index:800;display:flex;gap:8px;animation:fadeInUp .6s ease .2s both}
+    .so-card{background:rgba(10,22,40,0.85);border:1px solid var(--border);border-radius:8px;padding:8px 14px;backdrop-filter:blur(12px);text-align:center;min-width:80px}
+    .so-n{font-family:'JetBrains Mono',monospace;font-size:1.2rem;font-weight:700;color:var(--cyan)}
+    .so-l{font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+
+    /* ── LEGEND (bottom-left, offset for sidebar) ── */
+    #legend{position:fixed;bottom:20px;left:296px;z-index:800;background:rgba(10,22,40,0.85);border:1px solid var(--border);border-radius:8px;padding:10px 14px;backdrop-filter:blur(12px);animation:fadeInUp .6s ease .3s both}
+    .leg-title{font-family:'JetBrains Mono',monospace;font-size:.52rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+    .leg-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:.68rem}
+    .leg-dot{border-radius:50%;flex-shrink:0}
+
+    /* ── TOOLTIP ── */
+    #tooltip{position:fixed;z-index:900;pointer-events:none;background:rgba(10,22,40,0.95);border:1px solid var(--border);border-radius:8px;padding:10px 14px;max-width:320px;backdrop-filter:blur(12px);opacity:0;transition:opacity .15s;font-size:.75rem}
+    #tooltip.visible{opacity:1}
+    .tt-cat{font-family:'JetBrains Mono',monospace;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+    .tt-title{font-weight:700;margin-bottom:3px;line-height:1.3}
+    .tt-meta{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--muted)}
+    .tt-kw{margin-top:5px;display:flex;flex-wrap:wrap;gap:3px}
+    .tt-kw span{font-family:'JetBrains Mono',monospace;font-size:.56rem;padding:1px 6px;border-radius:3px;background:rgba(30,111,255,.15);color:#93c5fd}
+    .tt-conf{display:flex;align-items:center;gap:6px;margin-top:5px}
+    .tt-conf-bar{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.1)}
+    .tt-conf-fill{height:100%;border-radius:2px}
+    .tt-conf-lbl{font-family:'JetBrains Mono',monospace;font-size:.56rem;white-space:nowrap}
+
+    /* ── PERIOD FILTER ── */
+    #timeline{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:800;background:rgba(10,22,40,0.85);border:1px solid var(--border);border-radius:8px;padding:6px 14px;backdrop-filter:blur(12px);display:flex;align-items:center;gap:10px;animation:fadeInUp .6s ease .4s both}
+    .tl-lbl{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--muted)}
+    .tl-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;padding:3px 10px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s}
+    .tl-btn.active,.tl-btn:hover{background:rgba(30,111,255,.2);color:var(--text);border-color:var(--blue)}
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo"><div class="live-dot"></div>StatCyberMatrix / Globe de veille cyber</div>
+    <div class="nav-stats">
+      <div><strong id="n-events">0</strong> événements</div>
+      <div><strong id="n-countries">0</strong> pays</div>
+      <div><strong id="n-layers">4</strong> catégories</div>
+    </div>
+  </nav>
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-section">
+      <div class="sb-title">Catégories</div>
+      <div class="layer-row" onclick="toggleLayer('failles')"><div class="layer-left"><div class="layer-dot" style="background:#ef4444;box-shadow:0 0 6px #ef4444"></div><div><div class="layer-name">Failles &amp; Exploits</div><div class="layer-count" id="c-failles">0 art</div></div></div><div class="toggle on" id="tgl-failles"></div></div>
+      <div class="layer-row" onclick="toggleLayer('infra')"><div class="layer-left"><div class="layer-dot" style="background:#3b82f6;box-shadow:0 0 6px #3b82f6"></div><div><div class="layer-name">Infrastructures</div><div class="layer-count" id="c-infra">0 art</div></div></div><div class="toggle on" id="tgl-infra"></div></div>
+      <div class="layer-row" onclick="toggleLayer('editeurs')"><div class="layer-left"><div class="layer-dot" style="background:#f59e0b;box-shadow:0 0 6px #f59e0b"></div><div><div class="layer-name">Éditeurs critiques</div><div class="layer-count" id="c-editeurs">0 art</div></div></div><div class="toggle on" id="tgl-editeurs"></div></div>
+      <div class="layer-row" onclick="toggleLayer('menaces')"><div class="layer-left"><div class="layer-dot" style="background:#a855f7;box-shadow:0 0 6px #a855f7"></div><div><div class="layer-name">Groupes &amp; APT</div><div class="layer-count" id="c-menaces">0 art</div></div></div><div class="toggle on" id="tgl-menaces"></div></div>
+    </div>
+    <div class="sb-section" style="flex:1;overflow-y:auto">
+      <div class="sb-title" id="sb-sources-title">Sources actives</div>
+      <div id="sb-sources"></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-title">Pays les plus touchés</div>
+      <div id="sb-countries"></div>
+    </div>
+  </div>
+
+  <!-- GLOBE -->
+  <div id="globe-container"></div>
+
+  <!-- TOOLTIP -->
+  <div id="tooltip"></div>
+
+  <!-- STATS OVERLAY -->
+  <div id="stats-overlay">
+    <div class="so-card"><div class="so-n" id="so-articles">0</div><div class="so-l">Articles</div></div>
+    <div class="so-card"><div class="so-n" id="so-sources">0</div><div class="so-l">Sources</div></div>
+    <div class="so-card"><div class="so-n" id="so-cve">0</div><div class="so-l">CVE</div></div>
+    <div class="so-card"><div class="so-n" id="so-crit">0</div><div class="so-l">Critiques</div></div>
+  </div>
+
+  <!-- LEGEND -->
+  <div id="legend">
+    <div class="leg-title">Sévérité</div>
+    <div class="leg-row"><div class="leg-dot" style="width:10px;height:10px;background:#ef4444;box-shadow:0 0 6px #ef4444"></div>Critique</div>
+    <div class="leg-row"><div class="leg-dot" style="width:8px;height:8px;background:#f97316;box-shadow:0 0 4px #f97316"></div>Élevé</div>
+    <div class="leg-row"><div class="leg-dot" style="width:6px;height:6px;background:#f59e0b;box-shadow:0 0 3px #f59e0b"></div>Moyen</div>
+    <div class="leg-row"><div class="leg-dot" style="width:5px;height:5px;background:#3b82f6;box-shadow:0 0 3px #3b82f6"></div>Faible</div>
+  </div>
+
+  <!-- PERIOD FILTER -->
+  <div id="timeline">
+    <span class="tl-lbl">Période</span>
+    <button class="tl-btn active" onclick="setRange(this,'24h')">24h</button>
+    <button class="tl-btn" onclick="setRange(this,'7j')">7j</button>
+    <button class="tl-btn" onclick="setRange(this,'30j')">30j</button>
+    <button class="tl-btn" onclick="setRange(this,'all')">Tout</button>
+  </div>
+
+<script>
+// ================================================================
+// DATA (injected by Python)
+// ================================================================
+const EVENTS = [
+  {cat:'failles',lat:38.9,lon:-77.0,country:'USA',title:'placeholder',kw:['rce'],severity:'critical',source:'CISA Alerts',org_cible:'',geo_mode:'target',url:'',conf_score:85,conf_label:'forte',ts:null,src_lat:38.9,src_lon:-77.0}
+];
+
+const CFG = {
+  failles:  {color:'#ef4444',label:'Failles & Exploits'},
+  infra:    {color:'#3b82f6',label:'Infrastructures'},
+  editeurs: {color:'#f59e0b',label:'Éditeurs critiques'},
+  menaces:  {color:'#a855f7',label:'Groupes & APT'}
+};
+
+const SEV_SIZE = {critical:0.018,high:0.013,medium:0.01,low:0.007};
+const layerState = {failles:true,infra:true,editeurs:true,menaces:true};
+
+// ================================================================
+// THREE.JS SCENE
+// ================================================================
+const container = document.getElementById('globe-container');
+const W = container.clientWidth, H = container.clientHeight;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, W/H, 0.01, 100);
+camera.position.set(0, 0.3, 2.8);
+
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x050a14, 1);
+container.appendChild(renderer.domElement);
+
+// Lighting
+const ambient = new THREE.AmbientLight(0x335588, 0.6);
+scene.add(ambient);
+const dirLight = new THREE.DirectionalLight(0x6699cc, 0.8);
+dirLight.position.set(5, 3, 5);
+scene.add(dirLight);
+
+// ── EARTH SPHERE ──
+const RADIUS = 1.0;
+const earthGeo = new THREE.SphereGeometry(RADIUS, 80, 80);
+
+// Procedural dark-earth texture with grid
+const texCanvas = document.createElement('canvas');
+texCanvas.width = 2048; texCanvas.height = 1024;
+const ctx = texCanvas.getContext('2d');
+ctx.fillStyle = '#0a1628';
+ctx.fillRect(0, 0, 2048, 1024);
+
+// Subtle latitude/longitude grid
+ctx.strokeStyle = 'rgba(30,111,255,0.06)';
+ctx.lineWidth = 1;
+for (let lat = -80; lat <= 80; lat += 20) {
+  let y = (1 - (lat + 90) / 180) * 1024;
+  ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(2048, y); ctx.stroke();
+}
+for (let lon = -180; lon < 180; lon += 30) {
+  let x = ((lon + 180) / 360) * 2048;
+  ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1024); ctx.stroke();
+}
+
+// Subtle dot grid (every 5 degrees) -- gives digital earth feel
+ctx.fillStyle = 'rgba(30,111,255,0.08)';
+for (let lat = -85; lat <= 85; lat += 5) {
+  for (let lon = -180; lon < 180; lon += 5) {
+    let x = ((lon + 180) / 360) * 2048;
+    let y = (1 - (lat + 90) / 180) * 1024;
+    ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+const earthTex = new THREE.CanvasTexture(texCanvas);
+const earthMat = new THREE.MeshPhongMaterial({
+  map: earthTex,
+  color: 0x1a2a4a,
+  emissive: 0x050a14,
+  emissiveIntensity: 0.3,
+  shininess: 5,
+  transparent: false,
+});
+const earth = new THREE.Mesh(earthGeo, earthMat);
+scene.add(earth);
+
+// ── ATMOSPHERE GLOW ──
+const atmosGeo = new THREE.SphereGeometry(RADIUS * 1.12, 64, 64);
+const atmosMat = new THREE.ShaderMaterial({
+  vertexShader: `
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    void main(){
+      vNormal = normalize(normalMatrix * normal);
+      vPosition = (modelViewMatrix * vec4(position,1.0)).xyz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+    void main(){
+      float intensity = pow(0.55 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
+      gl_FragColor = vec4(0.12, 0.38, 1.0, 1.0) * intensity * 1.2;
+    }
+  `,
+  blending: THREE.AdditiveBlending,
+  side: THREE.BackSide,
+  transparent: true,
+  depthWrite: false,
+});
+scene.add(new THREE.Mesh(atmosGeo, atmosMat));
+
+// ── INNER GLOW (rim light on earth surface) ──
+const innerGlowGeo = new THREE.SphereGeometry(RADIUS * 1.002, 80, 80);
+const innerGlowMat = new THREE.ShaderMaterial({
+  vertexShader: `
+    varying vec3 vNormal;
+    void main(){
+      vNormal = normalize(normalMatrix * normal);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vNormal;
+    void main(){
+      float rim = 1.0 - dot(vNormal, vec3(0.0, 0.0, 1.0));
+      float intensity = pow(rim, 3.0) * 0.4;
+      gl_FragColor = vec4(0.0, 0.83, 1.0, intensity);
+    }
+  `,
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+  side: THREE.FrontSide,
+  depthWrite: false,
+});
+scene.add(new THREE.Mesh(innerGlowGeo, innerGlowMat));
+
+
+// ================================================================
+// COORDINATE HELPERS
+// ================================================================
+function latLonToVec3(lat, lon, r) {
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (lon + 180) * Math.PI / 180;
+  return new THREE.Vector3(
+    -(r) * Math.sin(phi) * Math.cos(theta),
+    (r) * Math.cos(phi),
+    (r) * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+// ================================================================
+// MARKERS (event locations on globe surface)
+// ================================================================
+const markerGroup = new THREE.Group();
+scene.add(markerGroup);
+const markerMeshes = []; // {mesh, ev}
+
+// Glow sprite texture
+const spriteCanvas = document.createElement('canvas');
+spriteCanvas.width = 64; spriteCanvas.height = 64;
+const sctx = spriteCanvas.getContext('2d');
+const grad = sctx.createRadialGradient(32,32,0,32,32,32);
+grad.addColorStop(0,'rgba(255,255,255,1)');
+grad.addColorStop(0.15,'rgba(255,255,255,0.8)');
+grad.addColorStop(0.4,'rgba(255,255,255,0.2)');
+grad.addColorStop(1,'rgba(255,255,255,0)');
+sctx.fillStyle = grad;
+sctx.fillRect(0,0,64,64);
+const spriteTex = new THREE.CanvasTexture(spriteCanvas);
+
+function createMarker(ev) {
+  const pos = latLonToVec3(ev.lat, ev.lon, RADIUS * 1.005);
+  const col = new THREE.Color(CFG[ev.cat].color);
+  const sz = SEV_SIZE[ev.severity] || 0.01;
+
+  // Core dot
+  const dotGeo = new THREE.SphereGeometry(sz * 0.5, 8, 8);
+  const dotMat = new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:0.9});
+  const dot = new THREE.Mesh(dotGeo, dotMat);
+  dot.position.copy(pos);
+
+  // Glow sprite
+  const spMat = new THREE.SpriteMaterial({
+    map: spriteTex, color: col,
+    transparent: true, opacity: 0.6,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const sp = new THREE.Sprite(spMat);
+  sp.scale.set(sz * 4, sz * 4, 1);
+  sp.position.copy(pos);
+
+  const group = new THREE.Group();
+  group.add(dot);
+  group.add(sp);
+  group.userData = {ev: ev, baseOpacity: 0.9};
+  markerGroup.add(group);
+  markerMeshes.push({group, ev, dot, sprite: sp, pos});
+}
+
+
+// ================================================================
+// ARCS (source -> target)
+// ================================================================
+const arcGroup = new THREE.Group();
+scene.add(arcGroup);
+const arcObjects = []; // {line, ev, phase, speed}
+
+function createArc(ev) {
+  // Skip arcs where source == target (fallback)
+  if (ev.geo_mode === 'source') return;
+  if (ev.src_lat == null || ev.src_lon == null) return;
+
+  const start = latLonToVec3(ev.src_lat, ev.src_lon, RADIUS * 1.003);
+  const end = latLonToVec3(ev.lat, ev.lon, RADIUS * 1.003);
+
+  // Arc height proportional to distance
+  const dist = start.distanceTo(end);
+  const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+  mid.normalize().multiplyScalar(RADIUS + dist * 0.5);
+
+  const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+  const points = curve.getPoints(60);
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+  const col = new THREE.Color(CFG[ev.cat].color);
+  const material = new THREE.LineBasicMaterial({
+    color: col,
+    transparent: true,
+    opacity: 0.0,
+    linewidth: 1,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  const line = new THREE.Line(geometry, material);
+  line.userData = {ev};
+  arcGroup.add(line);
+
+  // Traveling head (small bright sprite)
+  const headMat = new THREE.SpriteMaterial({
+    map: spriteTex, color: col,
+    transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const head = new THREE.Sprite(headMat);
+  head.scale.set(0.025, 0.025, 1);
+  arcGroup.add(head);
+
+  arcObjects.push({
+    line, head, ev, curve,
+    phase: Math.random(), // stagger start
+    speed: 0.15 + Math.random() * 0.2,
+    trailStart: 0,
+  });
+}
+
+
+// ================================================================
+// BUILD VISUALS FROM DATA
+// ================================================================
+let currentEvents = [];
+
+function buildVisuals(evts) {
+  // Clear
+  while (markerGroup.children.length) markerGroup.remove(markerGroup.children[0]);
+  while (arcGroup.children.length) arcGroup.remove(arcGroup.children[0]);
+  markerMeshes.length = 0;
+  arcObjects.length = 0;
+  currentEvents = evts;
+
+  const visible = evts.filter(e => layerState[e.cat]);
+  visible.forEach(ev => {
+    createMarker(ev);
+    createArc(ev);
+  });
+
+  // Update counters
+  const nE = visible.length;
+  const countries = new Set(visible.map(e => e.country));
+  const nSrc = new Set(visible.map(e => e.source));
+  const nCrit = visible.filter(e => e.severity === 'critical').length;
+
+  document.getElementById('n-events').textContent = nE;
+  document.getElementById('n-countries').textContent = countries.size;
+  document.getElementById('n-layers').textContent = Object.values(layerState).filter(Boolean).length;
+  document.getElementById('so-articles').textContent = nE;
+  document.getElementById('so-sources').textContent = nSrc.size;
+  document.getElementById('so-crit').textContent = nCrit;
+
+  // Category counts
+  const cc = {};
+  visible.forEach(e => { cc[e.cat] = (cc[e.cat]||0)+1; });
+  ['failles','infra','editeurs','menaces'].forEach(k => {
+    const el = document.getElementById('c-'+k);
+    if(el) el.textContent = (cc[k]||0)+' art';
+  });
+
+  // Top countries (sidebar)
+  const cCount = {};
+  visible.forEach(e => { cCount[e.country] = (cCount[e.country]||0)+1; });
+  const topC = Object.entries(cCount).sort((a,b) => b[1]-a[1]).slice(0,8);
+  document.getElementById('sb-countries').innerHTML = topC.map(([c,n]) =>
+    '<div class="country-row"><span style="font-size:.75rem">'+c+'</span><span class="country-n">'+n+'</span></div>'
+  ).join('');
+
+  // Sources
+  const srcSet = new Set(visible.map(e => e.source));
+  document.getElementById('sb-sources-title').textContent = srcSet.size + ' Sources actives';
+  document.getElementById('sb-sources').innerHTML = [...srcSet].sort().map(s =>
+    '<div class="src-item">'+s+'</div>'
+  ).join('');
+}
+
+
+// ================================================================
+// LAYER TOGGLE
+// ================================================================
+function toggleLayer(cat) {
+  layerState[cat] = !layerState[cat];
+  const tgl = document.getElementById('tgl-'+cat);
+  if(layerState[cat]) { tgl.classList.add('on'); tgl.classList.remove('off'); }
+  else { tgl.classList.remove('on'); tgl.classList.add('off'); }
+  buildVisuals(currentEvents.length ? currentEvents : EVENTS);
+}
+
+
+// ================================================================
+// TIME FILTER
+// ================================================================
+function setRange(btn, label) {
+  document.querySelectorAll('.tl-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const now = new Date();
+  let cutoff = null;
+  if(label==='24h') cutoff = new Date(now - 24*3600*1000);
+  else if(label==='7j') cutoff = new Date(now - 7*24*3600*1000);
+  else if(label==='30j') cutoff = new Date(now - 30*24*3600*1000);
+  const filtered = cutoff ? EVENTS.filter(e => e.ts && new Date(e.ts)>=cutoff) : EVENTS;
+  buildVisuals(filtered);
+}
+
+
+// ================================================================
+// MOUSE INTERACTION (rotate globe)
+// ================================================================
+let isDragging = false, prevMouse = {x:0, y:0};
+let rotVelX = 0, rotVelY = 0;
+let autoRotateSpeed = 0.002;
+
+container.addEventListener('mousedown', e => {
+  isDragging = true;
+  prevMouse = {x: e.clientX, y: e.clientY};
+  autoRotateSpeed = 0; // stop auto-rotate on interaction
+});
+
+container.addEventListener('mousemove', e => {
+  if(isDragging) {
+    const dx = e.clientX - prevMouse.x;
+    const dy = e.clientY - prevMouse.y;
+    rotVelY = dx * 0.003;
+    rotVelX = dy * 0.003;
+    earth.rotation.y += rotVelY;
+    earth.rotation.x += rotVelX;
+    earth.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, earth.rotation.x));
+    prevMouse = {x: e.clientX, y: e.clientY};
+  }
+  // Tooltip on hover (raycasting)
+  checkHover(e);
+});
+
+container.addEventListener('mouseup', () => {
+  isDragging = false;
+  // Restore gentle auto-rotate after 3s
+  setTimeout(() => { if(!isDragging) autoRotateSpeed = 0.001; }, 3000);
+});
+
+container.addEventListener('wheel', e => {
+  e.preventDefault();
+  camera.position.z = Math.max(1.5, Math.min(5, camera.position.z + e.deltaY * 0.002));
+}, {passive:false});
+
+// Touch support
+container.addEventListener('touchstart', e => {
+  if(e.touches.length===1){isDragging=true; prevMouse={x:e.touches[0].clientX,y:e.touches[0].clientY}; autoRotateSpeed=0;}
+},{passive:true});
+container.addEventListener('touchmove', e => {
+  if(isDragging && e.touches.length===1){
+    const dx=e.touches[0].clientX-prevMouse.x, dy=e.touches[0].clientY-prevMouse.y;
+    earth.rotation.y+=dx*0.003; earth.rotation.x+=dy*0.003;
+    earth.rotation.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,earth.rotation.x));
+    prevMouse={x:e.touches[0].clientX,y:e.touches[0].clientY};
+  }
+},{passive:true});
+container.addEventListener('touchend', () => {isDragging=false; setTimeout(()=>{if(!isDragging) autoRotateSpeed=0.001;},3000);});
+
+
+// ================================================================
+// HOVER / TOOLTIP (raycasting on markers)
+// ================================================================
+const raycaster = new THREE.Raycaster();
+raycaster.params.Points = {threshold: 0.05};
+const mouse = new THREE.Vector2();
+const tooltip = document.getElementById('tooltip');
+
+function confColor(l){return l==='forte'?'#22c55e':l==='moyenne'?'#f59e0b':'#ef4444';}
+
+function checkHover(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+
+  let hit = null;
+  for (const m of markerMeshes) {
+    const intersects = raycaster.intersectObject(m.group, true);
+    if (intersects.length > 0 && intersects[0].distance < 5) {
+      hit = m; break;
+    }
+  }
+
+  if (hit) {
+    const ev = hit.ev;
+    const kws = ev.kw.map(k => '<span>'+k+'</span>').join('');
+    const dateStr = ev.ts ? new Date(ev.ts).toLocaleDateString('fr-FR') : '--';
+    const cc = confColor(ev.conf_label);
+    const confHtml = ev.conf_score != null ?
+      '<div class="tt-conf"><span class="tt-conf-lbl" style="color:'+cc+'">'+ev.conf_label+'</span><div class="tt-conf-bar"><div class="tt-conf-fill" style="width:'+ev.conf_score+'%;background:'+cc+'"></div></div><span class="tt-conf-lbl" style="color:var(--muted)">'+ev.conf_score+'/100</span></div>' : '';
+
+    tooltip.innerHTML =
+      '<div class="tt-cat" style="color:'+CFG[ev.cat].color+'">'+CFG[ev.cat].label+'</div>' +
+      '<div class="tt-title">'+(ev.url ? '<a href="'+ev.url+'" target="_blank" style="color:var(--text);text-decoration:underline">'+ev.title+'</a>' : ev.title)+'</div>' +
+      '<div class="tt-meta">'+ev.country+' · '+ev.source+' · '+dateStr+'</div>' +
+      (ev.org_cible ? '<div class="tt-meta" style="color:#f59e0b;margin-top:2px">Cible : '+ev.org_cible+'</div>' : '') +
+      confHtml +
+      '<div class="tt-kw">'+kws+'</div>';
+
+    tooltip.classList.add('visible');
+    tooltip.style.left = Math.min(e.clientX + 16, window.innerWidth - 340) + 'px';
+    tooltip.style.top = Math.min(e.clientY - 10, window.innerHeight - 200) + 'px';
+  } else {
+    tooltip.classList.remove('visible');
+  }
+}
+
+container.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+
+
+// ================================================================
+// ANIMATION LOOP
+// ================================================================
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
+
+  // Auto-rotate
+  earth.rotation.y += autoRotateSpeed;
+
+  // Sync all child groups with earth rotation
+  markerGroup.rotation.copy(earth.rotation);
+  arcGroup.rotation.copy(earth.rotation);
+
+  // Animate arcs (traveling head effect)
+  arcObjects.forEach(a => {
+    a.phase += a.speed * dt;
+    if (a.phase > 1.4) a.phase = -0.3; // loop with pause
+
+    const drawPhase = Math.max(0, Math.min(1, a.phase));
+    const fadePhase = Math.max(0, Math.min(1, a.phase - 0.4));
+
+    // Line opacity: fade in then fade out
+    if (a.phase < 0) {
+      a.line.material.opacity = 0;
+      a.head.material.opacity = 0;
+    } else if (a.phase <= 1) {
+      a.line.material.opacity = 0.35;
+      a.line.geometry.setDrawRange(0, Math.floor(drawPhase * 61));
+      // Head position
+      const pt = a.curve.getPoint(drawPhase);
+      a.head.position.copy(pt);
+      a.head.material.opacity = 0.9;
+    } else {
+      // Fade out
+      const fade = 1 - (a.phase - 1) / 0.4;
+      a.line.material.opacity = 0.35 * Math.max(0, fade);
+      a.head.material.opacity = 0;
+    }
+  });
+
+  // Marker pulse
+  markerMeshes.forEach((m, i) => {
+    const pulse = 0.6 + 0.4 * Math.sin(t * 2 + i * 0.3);
+    if(m.sprite) m.sprite.material.opacity = pulse * 0.5;
+  });
+
+  renderer.render(scene, camera);
+}
+
+// ================================================================
+// RESIZE
+// ================================================================
+window.addEventListener('resize', () => {
+  const w = container.clientWidth, h = container.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+// ================================================================
+// INIT
+// ================================================================
+buildVisuals(EVENTS);
+animate();
+
+// Auto-start with gentle rotation
+autoRotateSpeed = 0.002;
+
+</script>
+</body>
+</html>
