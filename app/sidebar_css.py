@@ -1,11 +1,10 @@
 # sidebar_css.py -- CSS sidebar + i18n EN/FR
 # Usage : from sidebar_css import inject_sidebar_css; inject_sidebar_css(lang)
 
+import json
 import streamlit as st
 import streamlit.components.v1 as components
 
-
-# Mapping nom de fichier -> label traduit
 _NAV_LABELS = {
     "Accueil":                {"en": "Home",                "fr": "Accueil"},
     "Articles collectes":     {"en": "Collected articles",  "fr": "Articles collectes"},
@@ -42,14 +41,13 @@ def inject_sidebar_css(lang="en"):
     [data-testid="stSidebar"] * { color: #7a9cc8 !important; }
 
     a[data-testid="stSidebarNavLink"] {
-        font-family: 'JetBrains Mono', 'Roboto Mono', monospace !important;
+        font-family: 'JetBrains Mono', monospace !important;
         font-size: 0.82rem !important;
         color: #7a9cc8 !important;
         padding: 10px 18px !important;
         margin: 1px 8px !important;
         border-radius: 0 !important;
         border-left: 3px solid transparent !important;
-        position: relative !important;
         transition: all 0.2s ease !important;
         text-decoration: none !important;
         display: block !important;
@@ -64,7 +62,6 @@ def inject_sidebar_css(lang="en"):
         background: linear-gradient(90deg, rgba(30,111,255,0.15), transparent) !important;
         border-left: 3px solid #a855f7 !important;
     }
-
     a[data-testid="stSidebarNavLink"] svg { display: none !important; }
 
     li:has(a[href*="Accueil"]) { border-bottom: 1px solid rgba(30,111,255,0.1) !important; padding-bottom: 8px !important; margin-bottom: 8px !important; }
@@ -72,31 +69,40 @@ def inject_sidebar_css(lang="en"):
     </style>
     """, unsafe_allow_html=True)
 
-    # JS : remplace les labels du sidebar selon la langue
-    import json
-    labels_json = json.dumps({k: v[lang] for k, v in _NAV_LABELS.items()})
+    # Build rename map : any known label -> target lang label
+    rename_map = {}
+    for base, langs in _NAV_LABELS.items():
+        target = langs.get(lang, base)
+        rename_map[base] = target
+        for lv in langs.values():
+            rename_map[lv] = target
+
+    map_json = json.dumps(rename_map)
 
     components.html(f"""
     <script>
     (function() {{
-        var labels = {labels_json};
+        var map = {map_json};
         var p = window.parent.document;
         function renameLinks() {{
-            var links = p.querySelectorAll('a[data-testid="stSidebarNavLink"] span');
-            links.forEach(function(span) {{
-                var txt = span.textContent.trim();
-                for (var key in labels) {{
-                    if (txt === key || txt === labels[key]) {{
-                        span.textContent = labels[key];
-                        break;
-                    }}
-                }}
+            var spans = p.querySelectorAll('a[data-testid="stSidebarNavLink"] span');
+            if (!spans.length) return;
+            spans.forEach(function(s) {{
+                var txt = s.textContent.trim();
+                if (map[txt] && map[txt] !== txt) s.textContent = map[txt];
             }});
         }}
         renameLinks();
-        // Retry apres le rendu Streamlit
-        setTimeout(renameLinks, 500);
-        setTimeout(renameLinks, 1500);
+        setTimeout(renameLinks, 300);
+        setTimeout(renameLinks, 800);
+        setTimeout(renameLinks, 2000);
+        setTimeout(renameLinks, 4000);
+        var sb = p.querySelector('[data-testid="stSidebar"]');
+        if (sb) {{
+            var obs = new MutationObserver(function() {{ renameLinks(); }});
+            obs.observe(sb, {{ childList: true, subtree: true, characterData: true }});
+            setTimeout(function() {{ obs.disconnect(); }}, 10000);
+        }}
     }})();
     </script>
     """, height=0)

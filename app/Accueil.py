@@ -24,10 +24,6 @@ inject_theme()
 # ── LANGUAGE STATE ───────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
     st.session_state.lang = "en"
-lang = st.session_state.lang
-
-# Sidebar avec langue
-inject_sidebar_css(lang)
 
 # ── DATA & LOGO ──────────────────────────────────────────────────────────────
 df_k1 = get_mart_k1()
@@ -41,25 +37,28 @@ if os.path.exists(_logo_path):
     with open(_logo_path, "rb") as f:
         LOGO_B64 = base64.b64encode(f.read()).decode()
 
-# ── SIDEBAR ──────────────────────────────────────────────────────────────────
+# ── SIDEBAR (language selector FIRST, then inject CSS with the result) ───────
 with st.sidebar:
     if LOGO_B64:
         st.markdown(f"<div style='text-align:center'><img src='data:image/png;base64,{LOGO_B64}' style='width:100%;'></div>", unsafe_allow_html=True)
     st.divider()
 
-    # Language toggle
     lang_choice = st.selectbox(
         "Language",
         options=["English", "Francais"],
-        index=0 if lang == "en" else 1,
+        index=0 if st.session_state.lang == "en" else 1,
         key="lang_select"
     )
-    st.session_state.lang = "en" if lang_choice == "English" else "fr"
-    lang = st.session_state.lang
+    new_lang = "en" if lang_choice == "English" else "fr"
+    st.session_state.lang = new_lang
+    lang = new_lang
 
     if st.button(t("Refresh", lang)):
         force_refresh()
         st.rerun()
+
+# Sidebar CSS injecte APRES que lang soit determine
+inject_sidebar_css(lang)
 
 # ── BANNER ────────────────────────────────────────────────────────────────────
 st.markdown(f"""
@@ -105,7 +104,6 @@ if not df_articles.empty:
 # ── KPI CARDS ─────────────────────────────────────────────────────────────────
 st.markdown("<br>", unsafe_allow_html=True)
 
-# CSS for KPI cards
 st.markdown("""
 <style>
 .kpi-btn-inner {
@@ -136,7 +134,7 @@ st.markdown("""
     background: rgba(10,22,40,0.7); border-radius: 10px;
     border-left: 3px solid #a855f7; padding: 28px 22px;
     display: flex; align-items: center; gap: 24px;
-    cursor: pointer; position: relative; overflow: hidden;
+    cursor: pointer; overflow: hidden;
     backdrop-filter: blur(8px); transition: all 0.2s;
     border: 1px solid rgba(0,212,255,0.06);
 }
@@ -145,7 +143,7 @@ st.markdown("""
 .map-btag {
     font-family: 'JetBrains Mono', monospace; font-size: 10px;
     color: #a855f7; border: 1px solid rgba(168,85,247,0.3);
-    border-radius: 4px; padding: 3px 10px; margin-right: 6px; letter-spacing: 0.5px;
+    border-radius: 4px; padding: 3px 10px; margin-right: 6px;
 }
 </style>
 """, unsafe_allow_html=True)
