@@ -534,7 +534,8 @@ map_path = pathlib.Path(__file__).parent.parent / "carte_menaces_globe.html"
 html = map_path.read_text(encoding="utf-8")
 
 # Inject events data
-events_js = json.dumps(events, ensure_ascii=False)
+# Inject events data -- escape </ to prevent </script> breaking HTML
+events_js = json.dumps(events, ensure_ascii=True).replace('</', '<\\/')
 html = re.sub(
     r"var EVENTS\s*=\s*\[.*?\];",
     f"var EVENTS = {events_js};",

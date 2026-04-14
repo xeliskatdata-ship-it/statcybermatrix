@@ -133,17 +133,17 @@
     <button class="tl-btn" onclick="setRange(this,'all')">Tout</button>
   </div>
 
-<!-- DATA outside onload so Python regex injection still works -->
-<script>
-var EVENTS = [
-  {cat:'failles',lat:38.9,lon:-77.0,country:'USA',title:'placeholder',kw:['rce'],severity:'critical',source:'CISA Alerts',org_cible:'',geo_mode:'target',url:'',conf_score:85,conf_label:'forte',ts:null,src_lat:38.9,src_lon:-77.0}
-];
-</script>
-
-<!-- Three.js loaded BEFORE main script -->
+<!-- Three.js loaded first -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
+// ================================================================
+// DATA (injected by Python — must be in same script block)
+// ================================================================
+var EVENTS = [
+  {cat:'failles',lat:38.9,lon:-77.0,country:'USA',title:'placeholder',kw:['rce'],severity:'critical',source:'CISA Alerts',org_cible:'',geo_mode:'target',url:'',conf_score:85,conf_label:'forte',ts:null,src_lat:38.9,src_lon:-77.0}
+];
+
 // ================================================================
 // MAIN -- wrapped in onload to ensure DOM + Three.js are ready
 // ================================================================
