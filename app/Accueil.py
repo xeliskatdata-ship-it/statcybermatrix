@@ -123,10 +123,9 @@ st.markdown("""
     color: var(--c); opacity: 0.04; line-height: 1; pointer-events: none;
 }
 .kpi-btitle {
-    font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 600;
+    font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 600;
     color: #fff; margin-bottom: 8px; text-align: center;
 }
-.kpi-bdesc {
     font-family: 'JetBrains Mono', monospace; font-size: 11px;
     color: #7a9cc8; text-align: center; line-height: 1.5;
 }
@@ -139,7 +138,7 @@ st.markdown("""
     border: 1px solid rgba(0,212,255,0.06);
 }
 .map-btn-inner:hover { background: rgba(10,22,40,0.9); transform: translateX(4px); }
-.map-btitle { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 600; color: #fff; }
+.map-btitle { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 600; color: #fff; }
 .map-btag {
     font-family: 'JetBrains Mono', monospace; font-size: 10px;
     color: #a855f7; border: 1px solid rgba(168,85,247,0.3);
@@ -165,7 +164,7 @@ for i, (key, color, num, title, desc, page) in enumerate(_KPIS):
         <div class="kpi-btn-inner" style="--c:{color}">
             <div class="kpi-bnum">{num}</div>
             <div class="kpi-btitle">{title}</div>
-            <div class="kpi-bdesc">{desc}</div>
+            
         </div>
         """, unsafe_allow_html=True)
         if st.button(f"{t('See analysis', lang)} {num}", key=f"btn_{key}", use_container_width=True):
@@ -173,16 +172,12 @@ for i, (key, color, num, title, desc, page) in enumerate(_KPIS):
 
 # ── THREAT MAP CARD ───────────────────────────────────────────────────────────
 st.markdown("<br>", unsafe_allow_html=True)
-col_map, _ = st.columns([2, 1])
-with col_map:
+col_map1, col_map2, col_map3 = st.columns(3)
+with col_map2:
     st.markdown(f"""
-    <div class="map-btn-inner">
-      <div style="font-size:32px;">&#127758;</div>
-      <div style="flex:1">
-        <div class="map-btitle">07. {t("Threat map", lang)}</div>
-        <div style="font-family:JetBrains Mono;font-size:11px;color:#7a9cc8;margin:6px 0 10px;">{t("Threat map desc", lang)}</div>
-        <div><span class="map-btag">{t("Real time", lang)}</span><span class="map-btag">{t("Geolocation", lang)}</span></div>
-      </div>
+    <div class="kpi-btn-inner" style="--c:#a855f7">
+        <div class="kpi-bnum">07</div>
+        <div class="kpi-btitle">&#127758; {t("Threat map", lang)}</div>
     </div>
     """, unsafe_allow_html=True)
     if st.button(t("Open live map", lang), key="btn_map", use_container_width=True):
