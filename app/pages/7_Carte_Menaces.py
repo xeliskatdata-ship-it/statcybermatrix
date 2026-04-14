@@ -262,7 +262,10 @@ def _extract_attacker(title, desc):
     for pat in _ATTRIB_PATTERNS:
         m = re.search(pat, full_text, re.IGNORECASE)
         if m:
-            raw = m.group("country").strip()
+            try:
+                raw = m.group("country").strip()
+            except (IndexError, AttributeError):
+                continue
             normalized = _COUNTRY_NORMALIZE.get(raw, raw)
             geo = _ATTACKER_GEO.get(normalized)
             if geo:
