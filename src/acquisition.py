@@ -163,10 +163,11 @@ def collect_otx():
         return []
 
     try:
+        # activity/community ne requiert pas d'abonnement (vs /subscribed)
         r = requests.get(
-            "https://otx.alienvault.com/api/v1/pulses/subscribed",
-            headers={"X-OTX-API-KEY": key},
-            params={"limit": 50, "sort": "-created"},
+            "https://otx.alienvault.com/api/v1/pulses/activity",
+            headers={"X-OTX-API-KEY": key, **HEADERS_CHROME},
+            params={"limit": 50, "page": 1},
             timeout=TIMEOUT,
         )
         r.raise_for_status()
@@ -193,7 +194,7 @@ def collect_otx():
 # 3. NVD / NIST
 # ---------------------------------------------------
 def collect_nvd():
-    headers = {}
+    headers = {**HEADERS_CHROME}
     key = os.getenv("NVD_API_KEY")
     if key:
         headers["apiKey"] = key
@@ -202,9 +203,12 @@ def collect_nvd():
         r = requests.get(
             "https://services.nvd.nist.gov/rest/json/cves/2.0",
             headers=headers,
-            params={"resultsPerPage": 50, "startIndex": 0},
-            timeout=20,
+            params={"resultsPerPage": 20},
+            timeout=30,
         )
+        if r.status_code == 404:
+            log.warning("NVD : 404 -- endpoint temporairement indisponible")
+            return []
         r.raise_for_status()
 
         articles = []
@@ -282,12 +286,18 @@ def collect_ransomware_live():
 
 # ---------------------------------------------------
 # 5. THREATFOX (Abuse.ch) -- IOCs avec familles malware
-# Gratuit, pas de cle API
+# Gratuit, requiert Auth-Key (https://auth.abuse.ch/)
 # ---------------------------------------------------
 def collect_threatfox():
+    key = os.getenv("ABUSECH_AUTH_KEY")
+    if not key:
+        log.info("ABUSECH_AUTH_KEY absente -- skip ThreatFox")
+        return []
+
     try:
         r = requests.post(
             "https://threatfox-api.abuse.ch/api/v1/",
+            headers={"Auth-Key": key, **HEADERS_CHROME},
             json={"query": "get_iocs", "days": 1},
             timeout=TIMEOUT,
         )
@@ -333,13 +343,18 @@ def collect_threatfox():
 
 # ---------------------------------------------------
 # 6. URLHAUS (Abuse.ch) -- URLs malveillantes recentes
-# Gratuit, pas de cle API
+# Gratuit, requiert Auth-Key (https://auth.abuse.ch/)
 # ---------------------------------------------------
 def collect_urlhaus():
+    key = os.getenv("ABUSECH_AUTH_KEY")
+    if not key:
+        log.info("ABUSECH_AUTH_KEY absente -- skip URLhaus")
+        return []
+
     try:
-        r = requests.post(
-            "https://urlhaus-api.abuse.ch/v1/urls/recent/",
-            data={"limit": 100},
+        r = requests.get(
+            "https://urlhaus-api.abuse.ch/v1/urls/recent/limit/100/",
+            headers={"Auth-Key": key, **HEADERS_CHROME},
             timeout=TIMEOUT,
         )
         r.raise_for_status()
@@ -380,12 +395,18 @@ def collect_urlhaus():
 
 # ---------------------------------------------------
 # 7. MALWAREBAZAAR (Abuse.ch) -- echantillons malware recents
-# Gratuit, pas de cle API
+# Gratuit, requiert Auth-Key (https://auth.abuse.ch/)
 # ---------------------------------------------------
 def collect_malwarebazaar():
+    key = os.getenv("ABUSECH_AUTH_KEY")
+    if not key:
+        log.info("ABUSECH_AUTH_KEY absente -- skip MalwareBazaar")
+        return []
+
     try:
         r = requests.post(
             "https://mb-api.abuse.ch/api/v1/",
+            headers={"Auth-Key": key, **HEADERS_CHROME},
             data={"query": "get_recent", "selector": "time"},
             timeout=TIMEOUT,
         )
