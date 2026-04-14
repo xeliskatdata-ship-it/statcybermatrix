@@ -105,20 +105,71 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── MAIN METRICS ──────────────────────────────────────────────────────────────
+# ── MAIN METRICS (animated counters) ──────────────────────────────────────────
 components.html(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 body {{ background:transparent; margin:0; }}
-.cards {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; font-family:'JetBrains Mono',monospace; }}
-.card {{ background:rgba(10,22,40,0.7); border:1px solid rgba(0,212,255,0.1); border-radius:10px; padding:22px; text-align:center; color:#7a9cc8; font-size:0.65rem; text-transform:uppercase; letter-spacing:1.5px; }}
-.value {{ font-family:'Syne',sans-serif; font-size:3rem; font-weight:800; color:#00d4ff; margin-top:4px; }}
+.cards {{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }}
+.card {{
+    background:rgba(10,22,40,0.75);
+    border:1px solid rgba(0,212,255,0.12);
+    border-radius:12px;
+    padding:28px 24px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+}}
+.card::after {{
+    content:'';
+    position:absolute; bottom:0; left:0; right:0; height:3px;
+    background:var(--bar);
+    transform:scaleX(0); transform-origin:left;
+    animation:barFill 1.8s ease-out 0.3s forwards;
+}}
+@keyframes barFill {{ to {{ transform:scaleX(1); }} }}
+.label {{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; color:#7a9cc8;
+    letter-spacing:2.5px; text-transform:uppercase;
+    margin-bottom:10px;
+}}
+.counter {{
+    font-family:'Syne',sans-serif;
+    font-size:56px; font-weight:800;
+    color:var(--c);
+    line-height:1;
+    text-shadow:0 0 30px var(--glow);
+}}
 </style>
 <div class="cards">
-    <div class="card">{t("Articles collected", lang).upper()}<div class="value">{total_articles}</div></div>
-    <div class="card">{t("Active sources", lang).upper()}<div class="value" style="color:#a855f7">{nb_sources}</div></div>
+    <div class="card" style="--bar:linear-gradient(90deg,#00d4ff,#3b82f6);--c:#00d4ff;--glow:rgba(0,212,255,0.3)">
+        <div class="label">{t("Articles collected", lang).upper()}</div>
+        <div class="counter" id="cnt-articles">0</div>
+    </div>
+    <div class="card" style="--bar:linear-gradient(90deg,#a855f7,#ec4899);--c:#a855f7;--glow:rgba(168,85,247,0.3)">
+        <div class="label">{t("Active sources", lang).upper()}</div>
+        <div class="counter" id="cnt-sources">0</div>
+    </div>
 </div>
-""", height=140)
+<script>
+function animCount(id, target, dur) {{
+    var el = document.getElementById(id);
+    var start = 0, startTime = null;
+    function step(ts) {{
+        if (!startTime) startTime = ts;
+        var p = Math.min((ts - startTime) / dur, 1);
+        var ease = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.floor(ease * target).toLocaleString('fr-FR');
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = target.toLocaleString('fr-FR');
+    }}
+    requestAnimationFrame(step);
+}}
+animCount('cnt-articles', {total_articles}, 2000);
+animCount('cnt-sources', {nb_sources}, 1500);
+</script>
+""", height=160)
 
 # ── RECENT TABLE ──────────────────────────────────────────────────────────────
 if not df_articles.empty:
