@@ -1,7 +1,7 @@
 """
-CyberPulse -- Threat Map
+StatCyberMatrix -- Threat Map (Globe 3D)
 Articles geo-located by ATTACKED country (spaCy NER), fallback on source origin.
-Sprint 5 v3 : improved geolocation (4 enhancements) + cache 5min
+Sprint 5 v4 : Three.js globe + animated arcs source->target
 """
 
 import json
@@ -19,7 +19,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "src"))
 from db_connect import get_stg_articles, get_mart_k6, force_refresh
 
 st.set_page_config(
-    page_title="Carte de veille cyber par categorie de menaces",
+    page_title="Globe de veille cyber",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -38,6 +38,7 @@ iframe { display: block; height: 100vh !important; width: 100% !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# Desactive l'ECG canvas si present
 components.html("""
 <script>
 (function() {
@@ -457,9 +458,9 @@ _JITTER = {
 
 
 # ==============================================================
-# BUILD EVENTS -- cache 5 min pour eviter recalcul NER
+# BUILD EVENTS -- cache 5 min, avec coordonnees source pour arcs
 # ==============================================================
-@st.cache_data(ttl=300, show_spinner="Analyse geographique des articles...")
+@st.cache_data(ttl=300, show_spinner="Analyse géographique des articles...")
 def _build_events(df_json):
     df_local = pd.read_json(df_json)
     rng = random.Random(42)
@@ -492,12 +493,16 @@ def _build_events(df_json):
         pub_date = row.get("published_date")
         ts = str(pub_date) if pd.notna(pub_date) else None
 
+        # Coordonnees source pour les arcs (source de l'article)
+        _, src_lat, src_lon = SOURCE_GEO[src]
+
         evts.append({
             "cat": layer, "lat": jlat, "lon": jlon, "country": t_country,
             "title": title, "kw": kw, "severity": severity, "source": src,
             "org_cible": org_cible or "", "geo_mode": geo_mode, "ts": ts,
             "url": str(row.get("url", "") or ""),
             "conf_score": conf_score, "conf_label": conf_label,
+            "src_lat": src_lat, "src_lon": src_lon,
         })
 
     # Deduplication
@@ -524,27 +529,40 @@ for e in events:
 # ==============================================================
 # HTML TEMPLATE + INJECT
 # ==============================================================
-map_path = pathlib.Path(__file__).parent.parent / "carte_menaces.html"
+map_path = pathlib.Path(__file__).parent.parent / "carte_menaces_globe.html"
 html = map_path.read_text(encoding="utf-8")
 
+# Inject events data
 events_js = json.dumps(events, ensure_ascii=False)
-html = re.sub(r"const EVENTS\s*=\s*\[.*?\];", f"const EVENTS = {events_js};", html, flags=re.DOTALL)
+html = re.sub(
+    r"const EVENTS\s*=\s*\[.*?\];",
+    f"const EVENTS = {events_js};",
+    html, flags=re.DOTALL,
+)
+
+# Inject nav stats
 html = re.sub(r'id="n-events">[^<]+', f'id="n-events">{n_events}', html)
 html = re.sub(r'id="n-countries">[^<]+', f'id="n-countries">{n_countries}', html)
-html = re.sub(r'(<div class="stat-n">)\s*897\s*(</div>\s*<div class="stat-l">Articles)', rf'\g<1>{n_events}\2', html)
-html = re.sub(r'(<div class="stat-n">)\s*13\s*(</div>\s*<div class="stat-l">CVE)', rf'\g<1>{n_cve}\2', html)
 
-for layer_key, elem_id in [("failles", "c-failles"), ("infra", "c-infra"), ("editeurs", "c-editeurs"), ("menaces", "c-menaces")]:
+# Inject category counts
+for layer_key, elem_id in [("failles", "c-failles"), ("infra", "c-infra"),
+                           ("editeurs", "c-editeurs"), ("menaces", "c-menaces")]:
     n = cat_counts.get(layer_key, 0)
     html = re.sub(rf'id="{elem_id}">[^<]*</div>', f'id="{elem_id}">{n} art</div>', html)
 
-n_sources_actives = len({e["source"] for e in events})
-html = re.sub(r'<div class="sb-title">\d+ Sources actives</div>', f'<div class="sb-title">{n_sources_actives} Sources actives</div>', html)
+# Inject stats overlay
+html = re.sub(r'id="so-articles">[^<]+', f'id="so-articles">{n_events}', html)
+html = re.sub(r'id="so-cve">[^<]+', f'id="so-cve">{n_cve}', html)
+html = re.sub(r'id="so-crit">[^<]+', f'id="so-crit">{n_crit}', html)
 
-jawg_token = os.getenv("JAWG_TOKEN", "")
-html = html.replace("__JAWG_TOKEN__", jawg_token)
+n_sources_actives = len({e["source"] for e in events})
+html = re.sub(
+    r'id="sb-sources-title">[^<]*</div>',
+    f'id="sb-sources-title">{n_sources_actives} Sources actives</div>',
+    html,
+)
 
 if df.empty:
-    st.warning("No articles in the database -- run the acquisition pipeline first.")
+    st.warning("Aucun article en base — lancez le pipeline d'acquisition.")
 else:
     components.html(html, height=10000, scrolling=False)
