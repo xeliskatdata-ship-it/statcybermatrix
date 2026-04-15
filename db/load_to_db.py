@@ -64,24 +64,40 @@ def _load_raw(engine):
                 df[col] = None
         df = df[RAW_COLS]
 
-        # Dedup intra-fichier
-        df = df.drop_duplicates(subset=["url"], keep="first")
+        # Nettoyer les NaN AVANT tout INSERT (Ransomware.live envoie url=NaN) -> indispensable, cela m'a bloqué lors du chargement dans streamlit
+        df = df.fillna('')
+
+        # Dedup intra-fichier : sur (source, title) pour ne pas perdre les articles sans URL
+        df = df.drop_duplicates(subset=["source", "title"], keep="first")
 
         ins = skip = 0
         with engine.begin() as conn:
             for _, row in df.iterrows():
                 try:
-                    # WHERE NOT EXISTS au lieu de ON CONFLICT (pas de contrainte UNIQUE sur url)
-                    conn.execute(text("""
-                        INSERT INTO raw_articles
-                            (source, title, description, url, published_at, collected_at)
-                        SELECT
-                            :source, :title, :description, :url, :published_at, :collected_at
-                        WHERE NOT EXISTS (
-                            SELECT 1 FROM raw_articles
-                            WHERE url = :url
-                        )
-                    """), row.to_dict())
+                    # Dedup : url si present, sinon (source, title)
+                    if row['url'] and row['url'].strip():
+                        conn.execute(text("""
+                            INSERT INTO raw_articles
+                                (source, title, description, url, published_at, collected_at)
+                            SELECT
+                                :source, :title, :description, :url, :published_at, :collected_at
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM raw_articles
+                                WHERE url = :url
+                            )
+                        """), row.to_dict())
+                    else:
+                        # Articles sans URL : dedup sur (source, title)
+                        conn.execute(text("""
+                            INSERT INTO raw_articles
+                                (source, title, description, url, published_at, collected_at)
+                            SELECT
+                                :source, :title, :description, :url, :published_at, :collected_at
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM raw_articles
+                                WHERE source = :source AND title = :title
+                            )
+                        """), row.to_dict())
                     ins += 1
                 except Exception as e:
                     if skip == 0:
@@ -101,11 +117,9 @@ def _load_raw(engine):
 def _check_counts(engine):
     log.info("-" * 40)
     with engine.connect() as conn:
-        # raw_articles = seule table geree ici
         n = conn.execute(text("SELECT COUNT(*) FROM raw_articles")).scalar()
         log.info("  %-20s : %d lignes", "raw_articles", n)
 
-        # stg + marts = geres par dbt, on verifie si ils existent
         for name in ("stg_articles", "mart_k1", "mart_k3", "mart_k6"):
             try:
                 n = conn.execute(text(f"SELECT COUNT(*) FROM {name}")).scalar()
@@ -132,4 +146,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
