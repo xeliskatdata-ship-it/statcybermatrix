@@ -161,7 +161,7 @@ def _row(source, title, description, url, published_at):
         "source":       source,
         "title":        title or "",
         "description":  (description or "")[:500],
-        "url":          url or "",
+        "url":          str(url).strip() if url and str(url).lower() != "nan" else "",
         "published_at": published_at or "",
         "collected_at": datetime.now().isoformat(),
     }
