@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(
 log = logging.getLogger(__name__)
 
 # -- Config globale --
-TIMEOUT    = 15
+TIMEOUT    = 8
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "raw")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
