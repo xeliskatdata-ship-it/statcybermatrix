@@ -17,7 +17,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "src"))
-from db_connect import get_stg_articles, get_mart_k6, force_refresh
+from db_connect import get_stg_articles, get_mart_k6, force_refresh, WINDOW_MAP_DAYS
 
 st.set_page_config(
     page_title="Globe de veille cyber",
@@ -593,7 +593,8 @@ def extract_target(title, desc, source=""):
 # ==============================================================
 # LOAD DATA
 # ==============================================================
-df = get_stg_articles(limit=1000)
+# Fenêtre glissante 90j pour la carte -- cumul historique vs snapshot 24h
+df = get_stg_articles(limit=5000, window_days=WINDOW_MAP_DAYS)
 try:
     df_cve = get_mart_k6()
     n_cve = len(df_cve)
