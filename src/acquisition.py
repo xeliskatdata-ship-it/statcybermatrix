@@ -29,7 +29,17 @@ HEADERS_CHROME = {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0.0.0 Safari/537.36"
-    )
+    ),
+    # Headers anti-Cloudflare -- imitent un vrai navigateur (v9.2)
+    "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*;q=0.9",
+    "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "DNT": "1",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
 }
 
 # -- 100 flux RSS organises en groupes (S5 + S6 batch 1 + S6 batch 2) --
