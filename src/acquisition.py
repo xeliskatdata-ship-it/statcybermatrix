@@ -67,18 +67,16 @@ RSS_FEEDS = {
     "ANSSI":                  "https://www.cert.ssi.gouv.fr/feed/",
     "CERT-EU":                "https://cert.europa.eu/publications/threat-intelligence-rss",
     "NCSC UK":                "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",
-    "NCSC NZ":                "https://www.ncsc.govt.nz/rss/all/",
+    
     # Vendors threat research (10)
     "Malwarebytes Labs":      "https://blog.malwarebytes.com/feed/",
     "We Live Security":       "https://www.welivesecurity.com/feed/",
     "Recorded Future Blog":   "https://www.recordedfuture.com/feed",
     "Cybereason":             "https://www.cybereason.com/blog/rss.xml",
     "Unit42 (Palo Alto)":     "https://unit42.paloaltonetworks.com/feed/",
-    "Talos Intelligence":     "https://blog.talosintelligence.com/feeds/posts/default/",
     "Microsoft Security":     "https://www.microsoft.com/en-us/security/blog/feed/",
     "Elastic Security":       "https://www.elastic.co/security-labs/rss/feed.xml",
     "SentinelOne":            "https://www.sentinelone.com/blog/feed/",
-    "Bitdefender Labs":       "https://www.bitdefender.com/en-us/blog/labs/feed",
     # DFIR & Blue Team (3)
     "The DFIR Report":        "https://thedfirreport.com/feed/",
     "Red Canary":             "https://redcanary.com/blog/feed/",
@@ -87,9 +85,7 @@ RSS_FEEDS = {
     "Wired Security":         "https://www.wired.com/feed/category/security/latest/rss",
     "TechCrunch Security":    "https://techcrunch.com/tag/cybersecurity/feed/",
     # OSINT & investigations (5)
-    "OSINT Curious":          "https://www.osintcurio.us/feed/",
     "Bellingcat":             "https://www.bellingcat.com/feed/",
-    "Intel471":               "https://www.intel471.com/blog/rss.xml",
     "Shodan Blog":            "https://blog.shodan.io/rss/",
     "NixIntel":               "https://nixintel.info/feed/",
     # Threat Intelligence (7)
@@ -104,8 +100,7 @@ RSS_FEEDS = {
     "Cyble Blog":             "https://cyble.com/feed/",
     "Flashpoint Blog":        "https://flashpoint.io/blog/feed/",
     "Security Affairs":       "https://securityaffairs.com/feed",
-    # OCCRP investigations (1)
-    "OCCRP":                  "https://www.occrp.org/en/feed/articles",
+    
     # Vendors recherche complementaires (5)
     "Check Point Research":   "https://research.checkpoint.com/feed/",
     "Rapid7 Blog":            "https://blog.rapid7.com/rss/",
@@ -143,6 +138,47 @@ RSS_FEEDS = {
     "JPCERT Blog":            "https://blogs.jpcert.or.jp/en/atom.xml",
     # Amérique du Nord (1)
     "Canadian Cyber Centre":  "https://cyber.gc.ca/webservice/en/rss/news",
+# CERTs vérifiés pulsedive (4)
+    "CERT-EU Advisories":     "https://cert.europa.eu/publications/security-advisories-rss",
+    "CERT-BE Advisories":     "https://ccb.belgium.be/advisories.xml",
+    "Canadian Cyber Centre Alerts": "https://cyber.gc.ca/webservice/en/rss/alerts",
+    "NCSC NL Advisories":     "https://advisories.ncsc.nl/rss/advisories",
+    # CERTs complémentaires (3)
+    "NCSC NL News":           "https://feeds.ncsc.nl/nieuws.rss",
+    "CSIRT Italia":           "https://www.acn.gov.it/portale/feedrss/-/journal/rss/20119/723192",
+    "CERT-SE":                "https://www.cert.se/feed.rss",
+    "Kaspersky Daily":        "https://www.kaspersky.com/blog/rss/",
+    # Presse / news (2)
+    "The Register Security":  "https://www.theregister.com/security/headlines.atom",
+    "Security Boulevard":     "https://securityboulevard.com/feed/",
+    # Francophone (1)
+    "Global Security Mag":    "https://www.globalsecuritymag.fr/spip.php?page=backend",
+    # Blogs techniques et agrégateurs (5)
+    "CyberWire Daily":          "https://thecyberwire.com/feeds/rss.xml",
+    "Didier Stevens":           "https://blog.didierstevens.com/feed/",
+    # CERTs supplémentaires (4)
+    "CERT.br (Brésil)":         "https://www.cert.br/rss/certbr-rss.xml",
+    "CISA ICS Advisories":      "https://www.cisa.gov/cybersecurity-advisories/all.xml",
+    "CERT-FR Alertes":          "https://www.cert.ssi.gouv.fr/alerte/feed/",
+    "CERT-FR Avis":             "https://www.cert.ssi.gouv.fr/avis/feed/",
+    # Vendors recherche (6)
+    "Arctic Wolf Labs":         "https://arcticwolf.com/feed/",
+    "Varonis Blog":             "https://www.varonis.com/blog/rss.xml",
+    # Research & Red Team (3)
+    "PortSwigger Research":     "https://portswigger.net/research/rss",
+    # Recherche développeurs / AppSec (3)
+    "Snyk Research":            "https://snyk.io/blog/feed/",
+    # CERT de guerre / geopolitique (1)
+    "CERT-UA":                  "https://cert.gov.ua/api/articles/rss",
+    # Vendors identité / backup / email (4)
+    "Silverfort Blog":          "https://www.silverfort.com/blog/feed/",
+    "Veeam Blog":               "https://www.veeam.com/blog/feed/",
+    "Exabeam Blog":             "https://www.exabeam.com/feed/",
+    # Podcasts/digest populaires (3)
+    "Darknet Diaries":          "https://feeds.megaphone.fm/darknetdiaries",
+    "Smashing Security":        "https://www.smashingsecurity.com/rss",
+    
+
 }
 
 
