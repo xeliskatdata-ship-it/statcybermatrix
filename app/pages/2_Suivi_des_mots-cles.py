@@ -75,10 +75,9 @@ with f_col:
 df_filtered = drift_df[drift_df['acceleration'] >= min_accel]
 
 fig_tree = px.treemap(df_filtered, path=[px.Constant("Cyber Overview"), 'category', 'keyword'],
-    values='occurrences', color='acceleration',
-    color_continuous_scale=['#050a14', '#3b82f6', '#a855f7', '#00d4ff'], range_color=[0.5, 2.5])
-fig_tree.update_traces(textinfo="label+value", textfont=dict(color="white"))
-fig_tree.update_layout(margin=dict(t=0, b=0, l=10, r=10),
+    values='occurrences', color='occurrences',
+    color_continuous_scale=['#050a14', '#3b82f6', '#a855f7', '#00d4ff'])
+fig_tree.update_layout(margin=dict(t=0, l=0, r=0, b=0),
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(5,10,20,0.4)",
     font=dict(family="JetBrains Mono", size=11, color="#c8d6e5"))
 st.plotly_chart(fig_tree, use_container_width=True)
