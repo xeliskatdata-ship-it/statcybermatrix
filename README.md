@@ -2,7 +2,7 @@
 
 Veille automatique et analyse NLP des actualités cyber.
 
-Dashboard qui collecte, nettoie et classifie les articles cyber, attribue les attaques à des états-nations et géolocalise les menaces sur un globe 3D interactif depuis 107 sources spécialisées.
+Dashboard qui collecte, nettoie et classifie les articles cyber, attribue les attaques à des états-nations et géolocalise les menaces sur un globe 3D interactif depuis 106 sources spécialisées avec un taux de santé de 100 %.
 
 Projet solo réalisé dans le cadre de la formation Data Analytics 2026 à la Wild Code School.
 
@@ -10,7 +10,7 @@ Projet solo réalisé dans le cadre de la formation Data Analytics 2026 à la Wi
 
 ## Problématique
 
-Comment identifier rapidement les sujets émergents en cybersécurité, suivre leur évolution et visualiser les flux d'attaques attribuées entre pays ?
+Comment identifier rapidement les sujets émergents en cybersécurité et suivre leur évolution ?
 
 StatCyberMatrix automatise la veille structurée : collecte toutes les heures, classification en 13 catégories de menaces, géolocalisation du pays attaqué par NLP, attribution de l'attaquant par détection d'environ 120 groupes APT et ransomware, et affichage sur un globe 3D avec des arcs animés reliant le pays attaquant au pays victime.
 
@@ -20,7 +20,7 @@ StatCyberMatrix automatise la veille structurée : collecte toutes les heures, c
 
 | Couche | Outils |
 |--------|--------|
-| Collecte | Python, Requests, feedparser, 7 APIs REST + 100 flux RSS |
+| Collecte | Python, Requests, feedparser, 7 APIs REST + 99 flux RSS |
 | Nettoyage | Pandas, 942 mots-clés, 13 catégories |
 | Base de données | PostgreSQL sur Neon, 3 couches (raw, stg, mart) |
 | Transformation | SQL pur, vues chaînées (stg vers 6 marts) |
@@ -31,6 +31,7 @@ StatCyberMatrix automatise la veille structurée : collecte toutes les heures, c
 | Attribution | environ 120 groupes APT/ransomware, 11 regex EN+FR |
 | Cartographie | world-atlas countries-110m, 177 pays |
 | Traduction | FR/EN via deep-translator |
+| Maintenance RSS | Script de diagnostic parallélisé (scripts/check_feeds.py) |
 
 ---
 
@@ -39,7 +40,7 @@ StatCyberMatrix automatise la veille structurée : collecte toutes les heures, c
 Le pipeline s'exécute toutes les heures via GitHub Actions et suit un enchaînement séquentiel :
 
 ```
-acquisition.py (7 APIs + 100 RSS = 107 sources)
+acquisition.py (7 APIs + 99 RSS = 106 sources)
       |
       v
 cleaning.py (942 keywords, 13 catégories)
@@ -57,7 +58,7 @@ load_to_db.py --> Neon PostgreSQL raw_articles
               Streamlit Cloud Dashboard (8 pages + globe 3D)
 ```
 
-L'étape d'acquisition collecte simultanément les 7 APIs (NewsAPI, OTX, NVD, Ransomware.live, ThreatFox, URLhaus, MalwareBazaar) et les 100 flux RSS dont 12 francophones. Le nettoyage classifie chaque article. Le chargement insère les données dans Neon avec déduplication. Enfin, les vues matérialisées sont recalculées.
+L'étape d'acquisition collecte simultanément les 7 APIs (NewsAPI, OTX, NVD, Ransomware.live, ThreatFox, URLhaus, MalwareBazaar) et les 99 flux RSS actifs. Le nettoyage classifie chaque article. Le chargement insère les données dans Neon avec déduplication. Enfin, les vues matérialisées sont recalculées.
 
 ---
 
@@ -75,7 +76,7 @@ L'étape d'acquisition collecte simultanément les 7 APIs (NewsAPI, OTX, NVD, Ra
 
 ## Sources de données
 
-Le projet agrège 107 sources réparties en 7 APIs REST et 100 flux RSS.
+Le projet agrège 106 sources réparties en 7 APIs REST et 99 flux RSS actifs, avec un taux de santé du pipeline RSS de 100 %.
 
 ### APIs REST
 
@@ -91,24 +92,69 @@ Le projet agrège 107 sources réparties en 7 APIs REST et 100 flux RSS.
 
 Ransomware.live est la source la plus impactante pour le globe car elle fournit directement le triplet groupe attaquant / victime / pays, que le NLP peut exploiter sans ambiguïté.
 
-### Flux RSS (100 sources)
+### Flux RSS (99 sources actives, 100 % de santé)
 
 | Type | Nombre | Exemples |
 |------|--------|----------|
-| Presse anglo généraliste | 9 | The Hacker News, BleepingComputer, Krebs on Security |
-| Investigatif et experts | 4 | The Record, Infosecurity Magazine |
-| Francophone | 8 | Zataz, ANSSI, Cybermalveillance.gouv.fr, IT-Connect, UnderNews, Orange Cyberdefense, Sekoia Blog |
-| Gouvernemental et CERTs | 9 | ANSSI, CERT-EU, NCSC UK, ENISA, CERT-NZ, CERT-AU, BSI Allemagne, JPCERT Japon |
-| Vendors threat research | 21 | Unit42, Talos, Microsoft Security, CrowdStrike, Google Threat Intel, Check Point, Fortinet, Sophos, Bitdefender, Volexity, Rapid7, Tenable, Qualys |
-| DFIR et Blue Team | 3 | The DFIR Report, Red Canary, Huntress |
-| OSINT et investigations | 7 | Bellingcat, Intel471, Shodan Blog |
-| Threat Intelligence | 14 | SANS ISC, Securelist, Proofpoint, Citizen Lab, Malware Traffic Analysis |
-| Presse et news cyber | 6 | Wired Security, Ars Technica, TechCrunch Security, Cyber Defense Magazine, Troy Hunt |
-| Attribution et ransomware | 5 | Cyble, SOCRadar, Flashpoint, Security Affairs, Cyber Security News |
-| Cloud et Big Tech | 3 | AWS Security Blog, GitHub Security, Cloudflare |
-| Law enforcement | 3 | Europol, Interpol, Heimdal Blog |
+| Vendors threat research | 25 | Unit42, Microsoft Security, CrowdStrike, Mandiant, Securelist, Proofpoint, SentinelOne, Check Point Research, Malwarebytes Labs, Recorded Future, Cybereason, Elastic Security, Arctic Wolf Labs, Varonis |
+| Gouvernemental et CERTs | 18 | ANSSI, CERT-FR Alertes, CERT-FR Avis, CERT-EU, CISA Alerts, CISA ICS Advisories, NCSC UK, CERT.PL, CERT.LV, CERT.at, NCSC-FI, CCN-CERT, Swiss GovCERT, CERT-BE, AusCERT, HKCERT, JPCERT Japon, Canadian Cyber Centre |
+| Presse cyber anglophone | 15 | The Hacker News, BleepingComputer, Krebs on Security, Dark Reading, SecurityWeek, CyberScoop, Threatpost, Schneier on Security, The Record, The Register Security, CyberWire Daily |
+| DFIR, Blue Team et recherche indépendante | 10 | The DFIR Report, Red Canary, Huntress, Didier Stevens, SANS ISC, Malware Traffic Analysis, PortSwigger Research |
+| OSINT et investigations | 8 | Bellingcat, Citizen Lab, Shodan Blog, NixIntel, The Intercept |
+| Francophone | 8 | Zataz, ANSSI, IT-Connect, UnderNews, French Breaches, CERT-FR Alertes, CERT-FR Avis, Global Security Mag |
+| Attribution et ransomware spécialisés | 6 | Cyble, SOCRadar, Flashpoint, Security Affairs, Kaspersky Daily, Group-IB |
+| Médias tech généralistes | 5 | Wired Security, TechCrunch Security, Troy Hunt, Security Boulevard, Infosecurity Magazine |
+| Cloud et Big Tech | 4 | AWS Security Blog, GitHub Security, Cloudflare, Google Security Blog |
 
 Les sources francophones sont automatiquement traitées par le modèle spaCy français pour une meilleure extraction des entités géographiques.
+
+---
+
+## Maintenance du pipeline RSS
+
+Le pipeline collecte 99 sources RSS cybersécurité avec un taux de santé de 100 %.
+Pour auditer la santé des flux à tout moment :
+
+```bash
+python scripts/check_feeds.py
+```
+
+Sortie : synthèse écran + CSV détaillé dans `data/feeds_diagnostic.csv`.
+Durée : ~15-20 secondes pour 100 flux testés en parallèle (15 workers).
+
+### Workflow lors d'un ajout de flux
+
+1. Ajouter l'URL dans `RSS_FEEDS` (src/acquisition.py)
+2. Ajouter les coordonnées dans `SOURCE_GEO` (app/pages/7_Carte_Menaces.py)
+3. Lancer `python scripts/check_feeds.py`
+4. Retirer les flux KO identifiés (verdicts : URL_MORTE, ANTI_BOT, HTML_AU_LIEU_XML)
+5. Commit + push
+
+### Verdicts de santé possibles
+
+| Verdict | Cause | Action |
+|---------|-------|--------|
+| OK | Flux RSS valide, XML parsable | Garder |
+| URL_MORTE | HTTP 404, URL changée ou supprimée | Retirer |
+| HTML_AU_LIEU_XML | Serveur retourne du HTML (page d'accueil) | Retirer |
+| ANTI_BOT | HTTP 403/406 (Cloudflare strict) | Retirer |
+| TIMEOUT | Serveur ne répond pas sous 10s | Retirer si récurrent |
+| DNS_KO | Domaine disparu | Retirer |
+| SERVEUR_KO | HTTP 5xx récurrent | Retirer si récurrent |
+| REDIRECTION | URL finale différente | Mettre à jour |
+
+### Commandes de filtrage utiles
+
+```bash
+# Lister tous les flux d'une catégorie
+grep "URL_MORTE" data/feeds_diagnostic.csv
+
+# Lister plusieurs catégories d'un coup
+grep "URL_MORTE\|ANTI_BOT\|HTML_AU_LIEU_XML" data/feeds_diagnostic.csv
+
+# Ouvrir le CSV dans VS Code
+code data/feeds_diagnostic.csv
+```
 
 ---
 
@@ -161,11 +207,11 @@ Troisième étape : scan du corps de l'article sur les 1000 premiers caractères
 Quatrième étape : analyse NER bilingue via spaCy (modèles anglais et français), avec un scoring par proximité entre l'entité géographique et les mots-clés cyber les plus proches dans le texte.
 Cinquième étape : fallback sur les coordonnées de la source RSS si aucun pays n'a été identifié dans les étapes précédentes.
 
-Chaque géolocalisation reçoit un score de confiance entre 0 et 100, calculé sur quatre axes : 
-   localisation (0 à 40 points selon la méthode de détection), 
-   victime identifiée (0 à 35 points si une organisation est confirmée par spaCy), 
-   signal cyber (0 à 15 points si un mot-clé fort apparaît en début d'article), 
-   et pénalités pour ambiguïtés (jusqu'à -28 points). 
+Chaque géolocalisation reçoit un score de confiance entre 0 et 100, calculé sur quatre axes :
+   localisation (0 à 40 points selon la méthode de détection),
+   victime identifiée (0 à 35 points si une organisation est confirmée par spaCy),
+   signal cyber (0 à 15 points si un mot-clé fort apparaît en début d'article),
+   et pénalités pour ambiguïtés (jusqu'à -28 points).
 Les seuils sont : forte au-dessus de 70, moyenne entre 45 et 70, faible en dessous de 45.
 
 ---
@@ -199,7 +245,7 @@ L'utilisateur peut faire pivoter le globe par drag, zoomer par scroll, et survol
 ```
 statcybermatrix/
 |-- src/
-|   |-- acquisition.py          # 7 APIs + 100 RSS = 107 sources
+|   |-- acquisition.py          # 7 APIs + 99 RSS = 106 sources
 |   |-- cleaning.py             # 13 catégories, 942 mots-clés
 |   |-- db_connect.py           # Connexion PostgreSQL, cache TTL 120s
 |   +-- sidebar_css.py          # CSS sidebar, badges KPI + compteurs live
@@ -221,7 +267,7 @@ statcybermatrix/
 |       +-- 7_Carte_Menaces.py  # NLP + attribution APT + globe 3D
 |
 |-- db/
-|   |-- load_to_db.py           # INSERT WHERE NOT EXISTS, dedup 3 couches
+|   |-- load_to_db.py           
 |   |-- neon_stg_marts.sql
 |   |-- queries.sql
 |   +-- schema.sql
@@ -231,6 +277,13 @@ statcybermatrix/
 |   |   |-- mart/               # mart_k1.sql ... mart_k6.sql
 |   |   +-- staging/            # stg_articles.sql
 |   +-- profiles.yml
+|
+|-- scripts/
+|   +-- check_feeds.py          # Diagnostic parallélisé du pipeline RSS
+|
+|-- data/
+|   |-- raw/                    # CSV articles par jour
+|   +-- feeds_diagnostic.csv    # Sortie de check_feeds.py
 |
 |-- .github/
 |   |-- scripts/
@@ -253,31 +306,33 @@ raw_articles (table)
     --> mart_k1 ... mart_k6 (vues, agrégation auto-refresh)
 ```
 
-La classification est définie uniquement dans stg_articles. 
-Les marts ne font que de l'agrégation. 
+La classification est définie uniquement dans stg_articles.
+Les marts ne font que de l'agrégation.
 Toutes les couches intermédiaires sont des vues, ce qui signifie que les données se rafraîchissent automatiquement à chaque nouvelle collecte sans intervention manuelle.
 
 ---
 
 ## Limites connues
 
-Le NLP peut confondre le pays attaquant et le pays attaqué. Par exemple, un article titrant "Chinese hackers target US infrastructure" risque d'être géolocalisé en Chine au lieu des États-Unis. 
+Le NLP peut confondre le pays attaquant et le pays attaqué. Par exemple, un article titrant "Chinese hackers target US infrastructure" risque d'être géolocalisé en Chine au lieu des États-Unis.
 Le filtre strict qui impose que l'attaquant soit différent de la cible atténue ce biais, mais ne l'élimine pas complètement.
 
-Chaque article est classifié dans une seule catégorie. 
+Chaque article est classifié dans une seule catégorie.
 Un article traitant simultanément de ransomware et de fuite de données sera attribué à la première catégorie détectée par les regex.
 
-Le pipeline rejette les articles dont l'URL existe déjà en base. 
+Le pipeline rejette les articles dont l'URL existe déjà en base.
 Les flux RSS renvoyant les mêmes URLs ne génèrent pas de doublons, mais les articles modifiés après publication ne sont pas mis à jour.
 
-Certaines APIs comme NVD ou OTX peuvent être temporairement indisponibles. 
+Certaines APIs comme NVD ou OTX peuvent être temporairement indisponibles.
 Le pipeline gère ces erreurs et continue la collecte avec les sources disponibles sans interrompre l'exécution.
+
+Les flux RSS changent régulièrement (sites migrés, URLs retirées, protections anti-bot Cloudflare). Le script scripts/check_feeds.py permet de détecter et nettoyer ces flux en une commande.
 
 ---
 
 ## Évolutions prévues
 
-Le pipeline horaire accumule l'historique en continu. 
+Le pipeline horaire accumule l'historique en continu.
 Plus le temps passe, plus le globe s'enrichit d'attaques attribuées, ce qui rend la visualisation de plus en plus pertinente.
 
 Une correction du biais attaquant-cible est prévue pour que le système ignore la géolocalisation quand le pays attaquant est détecté comme pays cible, et cherche le vrai pays victime plus loin dans le texte.
@@ -286,9 +341,11 @@ L'intégration de sources structurées comme OpenCTI au format STIX/TAXII et les
 
 Un filtre temporel (24h, 7 jours, 30 jours) sera réintroduit sur le globe une fois que les timestamps des articles seront correctement normalisés et que le volume de données récentes sera suffisant.
 
+Une évolution de check_feeds.py avec désactivation des redirections automatiques est prévue pour éviter les faux positifs lorsqu'un serveur redirige une URL 404 vers une autre page 404.
+
 ---
 
 ## Auteur
 
-Stéphanie Bérard alias Xelis -- Wild Code School -- Promotion Data Analytics 2026
+Stéphanie Bérard -- Wild Code School -- Promotion Data Analytics 2026
 Dernière mise à jour : 16 avril 2026
