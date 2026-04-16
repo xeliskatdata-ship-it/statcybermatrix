@@ -143,20 +143,23 @@ anim('c2',{nb_sources},1200);
 
 # ── RECENT TABLE ──────────────────────────────────────────────────────────────
 if not df_articles.empty:
+    df_articles = df_articles.copy()
     df_articles['published_date'] = pd.to_datetime(df_articles['published_date']).dt.strftime('%Y-%m-%d')
-    # Colonne url affichee comme lien cliquable sur le titre de l'article
+    # LinkColumn affiche le titre mais utilise l'URL comme lien
+    # Astuce : on cree une colonne 'title_link' egale a l'URL, et display_text recupere le titre
+    df_articles['title_link'] = df_articles['url']
     st.dataframe(
-        df_articles[["source", "title", "url", "published_date"]],
+        df_articles[["source", "title_link", "title", "published_date"]],
         use_container_width=True, hide_index=True, height=500,
         column_config={
             "source": st.column_config.TextColumn(t("Sources", lang), width="small"),
-            "title": st.column_config.LinkColumn(
+            "title_link": st.column_config.LinkColumn(
                 "Title",
                 help=t("Click to open the article in a new tab", lang) if lang == "en" else "Cliquer pour ouvrir l'article dans un nouvel onglet",
-                display_text=r".*",   # Affiche le titre complet, pas l'URL
+                display_text=r"https?://(?:www\.)?([^/]+).*",   # Affiche le domaine a la place de l'URL
                 width="large",
             ),
-            "url": None,   # Masque la colonne URL brute (utilisee uniquement pour le lien)
+            "title": st.column_config.TextColumn("Titre complet" if lang == "fr" else "Full title", width="large"),
             "published_date": st.column_config.TextColumn("Date", width="small"),
         }
     )
