@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
 load_dotenv()
+# Fenêtres glissantes -- source de vérité unique pour toutes les pages
+WINDOW_MAP_DAYS = 90   # Carte des menaces (patterns géopolitiques)
+WINDOW_KPI_DAYS = 30   # Pages KPI (indicateurs opérationnels)
 
 # -- Connexion dual Cloud / Local
 if "postgres" in st.secrets:
@@ -68,22 +71,32 @@ def get_mart_k2():
 
 
 @st.cache_data(ttl=120)
-def get_stg_articles(keyword=None, limit=2000):
+@st.cache_data(ttl=120)
+def get_stg_articles(keyword=None, limit=5000, window_days=None):
+    # window_days : fenêtre glissante en jours (None = pas de filtre temporel)
+    # Utilise WINDOW_MAP_DAYS pour la carte, WINDOW_KPI_DAYS pour les KPI
     base = """
         SELECT source, title, description, url,
                published_date, category, content_length
         FROM stg_articles
         WHERE published_date IS NOT NULL
     """
+
+    # Filtre fenêtre glissante optionnel
+    window_clause = " AND published_date >= CURRENT_DATE - INTERVAL '1 day' * :window" if window_days else ""
+
     if keyword:
-        sql = base + """
+        sql = base + window_clause + """
               AND (LOWER(title) LIKE :kw OR LOWER(description) LIKE :kw)
             ORDER BY published_date DESC LIMIT :limit
         """
         params = {"kw": f"%{keyword.lower()}%", "limit": limit}
     else:
-        sql = base + " ORDER BY published_date DESC LIMIT :limit"
+        sql = base + window_clause + " ORDER BY published_date DESC LIMIT :limit"
         params = {"limit": limit}
+
+    if window_days:
+        params["window"] = window_days
 
     with get_engine().connect() as conn:
         df = pd.read_sql(text(sql), conn, params=params)
