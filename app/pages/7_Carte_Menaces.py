@@ -425,11 +425,19 @@ SOURCE_GEO = {
     "Sophos News": ("UK", 51.5, -0.1),
     "Trellix Blog": ("USA", 37.1, -95.7),
     "IntelligenceX Blog": ("Czech Republic", 50.1, 14.4),
-    "CERT-NZ": ("New Zealand", -41.3, 174.8),
-    "CERT-AU": ("Australia", -35.3, 149.1),
-    "BSI Allemagne": ("Germany", 52.5, 13.4),
     "JPCERT Japon": ("Japan", 35.7, 139.7),
     "Google Security Blog": ("USA", 37.4, -122.1),
+    "CERT.PL":                ("Poland", 52.2, 21.0),
+    "CERT.LV":                ("Latvia", 56.9, 24.1),
+    "CERT.at":                ("Austria", 48.2, 16.4),
+    "NCSC-FI":                ("Finland", 60.2, 24.9),
+    "CCN-CERT":               ("Spain", 40.4, -3.7),
+    "Swiss GovCERT":          ("Switzerland", 46.9, 7.4),
+    "CERT-BE":                ("Belgium", 50.8, 4.4),
+    "AusCERT":                ("Australia", -27.5, 153.0),
+    "HKCERT":                 ("Hong Kong", 22.3, 114.2),
+    "JPCERT Blog":            ("Japan", 35.7, 139.7),
+    "Canadian Cyber Centre":  ("Canada", 45.4, -75.7),
 }
 
 

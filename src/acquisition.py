@@ -42,7 +42,7 @@ HEADERS_CHROME = {
     "Sec-Fetch-Site": "none",
 }
 
-# -- 100 flux RSS organises en groupes (S5 + S6 batch 1 + S6 batch 2) --
+# -- 70 flux RSS vérifiés 
 RSS_FEEDS = {
     # Presse anglo generaliste (9)
     "The Hacker News":        "https://feeds.feedburner.com/TheHackersNews",
@@ -59,111 +59,90 @@ RSS_FEEDS = {
     "Infosecurity Magazine":  "https://www.infosecurity-magazine.com/rss/news/",
     "Helpnet Security":       "https://www.helpnetsecurity.com/feed/",
     "Graham Cluley":          "https://grahamcluley.com/feed/",
-    # Francophone (4)
+    # Francophone (3)
     "Zataz":                  "https://www.zataz.com/feed/",
     "French Breaches":        "https://frenchbreaches.com/feed.xml",
-    "LeMagIT Securite":       "https://www.lemagit.fr/rss/Securite/",
-    "No.log":                 "https://nolog.cz/feed/",
-    # Gouvernemental (4)
+    "IT-Connect":             "https://www.it-connect.fr/feed/",
+    # Gouvernemental & CERTs (4)
     "ANSSI":                  "https://www.cert.ssi.gouv.fr/feed/",
-    "CERT-EU":                "https://cert.europa.eu/publications/threat-intelligence/rss.xml",
+    "CERT-EU":                "https://cert.europa.eu/publications/threat-intelligence-rss",
     "NCSC UK":                "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",
-    "ENISA":                  "https://www.enisa.europa.eu/news/enisa-news/RSS",
-    # Vendors threat research (14)
+    "NCSC NZ":                "https://www.ncsc.govt.nz/rss/all/",
+    # Vendors threat research (10)
     "Malwarebytes Labs":      "https://blog.malwarebytes.com/feed/",
-    "Naked Security":         "https://nakedsecurity.sophos.com/feed/",
     "We Live Security":       "https://www.welivesecurity.com/feed/",
-    "Trend Micro":            "https://feeds.trendmicro.com/Anti-MalwareBlog",
     "Recorded Future Blog":   "https://www.recordedfuture.com/feed",
     "Cybereason":             "https://www.cybereason.com/blog/rss.xml",
     "Unit42 (Palo Alto)":     "https://unit42.paloaltonetworks.com/feed/",
-    "Talos Intelligence":     "https://blog.talosintelligence.com/feeds/posts/default",
+    "Talos Intelligence":     "https://blog.talosintelligence.com/feeds/posts/default/",
     "Microsoft Security":     "https://www.microsoft.com/en-us/security/blog/feed/",
-    "IBM X-Force":            "https://securityintelligence.com/feed/",
     "Elastic Security":       "https://www.elastic.co/security-labs/rss/feed.xml",
-    "Secureworks":            "https://www.secureworks.com/blog/rss",
     "SentinelOne":            "https://www.sentinelone.com/blog/feed/",
-    "WithSecure Labs":        "https://labs.withsecure.com/feed",
+    "Bitdefender Labs":       "https://www.bitdefender.com/en-us/blog/labs/feed",
     # DFIR & Blue Team (3)
     "The DFIR Report":        "https://thedfirreport.com/feed/",
     "Red Canary":             "https://redcanary.com/blog/feed/",
     "Huntress":               "https://www.huntress.com/blog/rss.xml",
     # Presse tech securite (2)
     "Wired Security":         "https://www.wired.com/feed/category/security/latest/rss",
-    "Ars Technica Security":  "https://feeds.arstechnica.com/arstechnica/security",
-    # OSINT & investigations (7)
-    "OSINT Curious":          "https://osintcurio.us/feed/",
+    "TechCrunch Security":    "https://techcrunch.com/tag/cybersecurity/feed/",
+    # OSINT & investigations (5)
+    "OSINT Curious":          "https://www.osintcurio.us/feed/",
     "Bellingcat":             "https://www.bellingcat.com/feed/",
-    "Intel471":               "https://intel471.com/blog/rss.xml",
+    "Intel471":               "https://www.intel471.com/blog/rss.xml",
     "Shodan Blog":            "https://blog.shodan.io/rss/",
-    "Maltego Blog":           "https://www.maltego.com/blog/feed/",
     "NixIntel":               "https://nixintel.info/feed/",
-    "Sector035":              "https://sector035.nl/feed",
-    # Threat Intelligence (14)
+    # Threat Intelligence (7)
     "SANS ISC":               "https://isc.sans.edu/rssfeed_full.xml",
     "Mandiant Blog":          "https://www.mandiant.com/resources/blog/rss.xml",
     "CrowdStrike Blog":       "https://www.crowdstrike.com/blog/feed/",
     "Securelist":             "https://securelist.com/feed/",
     "Proofpoint":             "https://www.proofpoint.com/us/rss.xml",
-    "CIRCL":                  "https://www.circl.lu/pub/tr/rss/",
-    "Abuse.ch":               "https://abuse.ch/blog/feed/",
     "Citizen Lab":            "https://citizenlab.ca/feed/",
     "The Intercept":          "https://theintercept.com/feed/?rss",
-    "OCCRP":                  "https://occrp.org/en/feed/articles",
-    "GreyNoise Blog":         "https://www.greynoise.io/blog/feed",
-    "Censys Blog":            "https://censys.com/blog/feed/",
-    "VulnCheck":              "https://vulncheck.com/blog/rss.xml",
-    "AttackerKB":             "https://attackerkb.com/blog/feed/",
-    # ── Sprint 6 batch 1 : +20 sources ──
-    # Francophone (4)
-    "Cybermalveillance":      "https://www.cybermalveillance.gouv.fr/feed/",
-    "IT-Connect":             "https://www.it-connect.fr/feed/",
-    "UnderNews":              "https://www.undernews.fr/feed",
-    "Cyber-news.fr":          "https://cyber-news.fr/feed/",
-    # Attribution / Ransomware (5)
+    # Attribution / Ransomware (3)
     "Cyble Blog":             "https://cyble.com/feed/",
-    "SOCRadar Blog":          "https://socradar.io/blog/feed/",
     "Flashpoint Blog":        "https://flashpoint.io/blog/feed/",
     "Security Affairs":       "https://securityaffairs.com/feed",
-    "Cyber Security News":    "https://cybersecuritynews.com/feed/",
-    # Vendors complementaires (6)
-    "Google Threat Intel":    "https://cloud.google.com/blog/topics/threat-intelligence/rss/",
+    # OCCRP investigations (1)
+    "OCCRP":                  "https://www.occrp.org/en/feed/articles",
+    # Vendors recherche complementaires (5)
     "Check Point Research":   "https://research.checkpoint.com/feed/",
-    "Fortinet Threat Research": "https://feeds.fortinet.com/fortinet/blog/threat-research",
-    "Sophos News":            "https://news.sophos.com/en-us/feed/",
-    "Trellix Blog":           "https://www.trellix.com/blogs/research/rss/",
-    "IntelligenceX Blog":     "https://blog.intelligencex.org/rss/latest-posts",
-    # CERTs internationaux (5)
-    "CERT-NZ":                "https://www.cert.govt.nz/rss/all/",
-    "CERT-AU":                "https://www.cyber.gov.au/rss.xml",
-    "BSI Allemagne":          "https://www.bsi.bund.de/SiteGlobals/Functions/RSSFeed/RSSNewsfeed/RSSBSINews_en.xml",
-    "JPCERT Japon":           "https://www.jpcert.or.jp/english/rss/jpcert-en.rdf",
-    "Google Security Blog":   "https://security.googleblog.com/feeds/posts/default",
-    # ── Sprint 6 batch 2 : +19 sources ──
-    # Presse / News cyber (4)
-    "TechCrunch Security":    "https://techcrunch.com/tag/cybersecurity/feed/",
-    "Cyber Defense Magazine": "https://cyberdefensemagazine.com/feed/",
-    "Heimdal Blog":           "https://heimdalsecurity.com/blog/feed/",
-    "Troy Hunt":              "https://troyhunt.com/rss/",
-    # Vendors recherche (7)
-    "Bitdefender Labs":       "https://www.bitdefender.com/blog/labs/feed/",
-    "Volexity Blog":          "https://www.volexity.com/blog/feed/",
     "Rapid7 Blog":            "https://blog.rapid7.com/rss/",
     "Tenable Blog":           "https://www.tenable.com/blog/feed",
     "Qualys Blog":            "https://blog.qualys.com/feed",
-    "Nozomi Networks":        "https://www.nozominetworks.com/blog/feed/",
     "ZDI Advisories":         "https://www.zerodayinitiative.com/rss/published/",
+    # CERTs internationaux (1)
+    "JPCERT Japon":           "https://www.jpcert.or.jp/english/rss/jpcert-en.rdf",
     # Cloud / Big Tech (3)
     "AWS Security Blog":      "https://aws.amazon.com/blogs/security/feed/",
     "GitHub Security":        "https://github.blog/tag/security/feed/",
     "Cloudflare Blog":        "https://blog.cloudflare.com/rss",
-    # Law enforcement (3)
+    # Law enforcement (1)
     "Europol":                "https://www.europol.europa.eu/rss.xml",
-    "Interpol Cyber":         "https://www.interpol.int/en/News-and-Events/News/rss",
+    # Traffic analysis (1)
     "Malware Traffic Analysis": "https://www.malware-traffic-analysis.net/blog-entries.rss",
-    # Francophone bonus (2)
-    "Orange Cyberdefense":    "https://orangecyberdefense.com/fr/feed/",
-    "Sekoia Blog":            "https://blog.sekoia.io/feed/",
+    # News supplémentaires (3)
+    "Heimdal Blog":           "https://heimdalsecurity.com/blog/feed/",
+    "Troy Hunt":              "https://troyhunt.com/rss/",
+    "IntelligenceX Blog":     "https://blog.intelligencex.org/rss/latest-posts",
+    # Supplémentaires (2)
+    "UnderNews":              "https://www.undernews.fr/feed",
+    "Google Security Blog":   "https://security.googleblog.com/feeds/posts/default",
+    # Europe (7)
+    "CERT.PL":                "https://cert.pl/en/rss.xml",
+    "CERT.LV":                "https://cert.lv/en/feed/rss/all",
+    "CERT.at":                "https://cert.at/cert-at.en.blog.rss_2.0.xml",
+    "NCSC-FI":                "https://www.kyberturvallisuuskeskus.fi/feed/rss/en",
+    "CCN-CERT":               "https://www.ccn-cert.cni.es/en/communication-events/articles-and-reports.rss",
+    "Swiss GovCERT":          "https://www.newsd.admin.ch/newsd/feeds/rss?lang=en&org-nr=1101",
+    "CERT-BE":                "https://ccb.belgium.be/news.xml",
+    # Asie-Pacifique (3)
+    "AusCERT":                "https://portal.auscert.org.au/rss/bulletins/",
+    "HKCERT":                 "https://www.hkcert.org/getrss/security-bulletin",
+    "JPCERT Blog":            "https://blogs.jpcert.or.jp/en/atom.xml",
+    # Amérique du Nord (1)
+    "Canadian Cyber Centre":  "https://cyber.gc.ca/webservice/en/rss/news",
 }
 
 
