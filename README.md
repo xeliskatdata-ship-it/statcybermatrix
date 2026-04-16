@@ -2,7 +2,7 @@
 
 Veille automatique et analyse NLP des actualités cyber.
 
-Dashboard de threat intelligence qui collecte, nettoie et classifie les articles cyber, attribue les attaques à des États-nations et géolocalise les menaces sur un globe 3D interactif depuis 107 sources spécialisées.
+Dashboard qui collecte, nettoie et classifie les articles cyber, attribue les attaques à des états-nations et géolocalise les menaces sur un globe 3D interactif depuis 107 sources spécialisées.
 
 Projet solo réalisé dans le cadre de la formation Data Analytics 2026 à la Wild Code School.
 
@@ -291,4 +291,4 @@ Un filtre temporel (24h, 7 jours, 30 jours) sera réintroduit sur le globe une f
 ## Auteur
 
 Stéphanie Bérard alias Xelis -- Wild Code School -- Promotion Data Analytics 2026
-Dernière mise à jour : 14 avril 2026
+Dernière mise à jour : 16 avril 2026

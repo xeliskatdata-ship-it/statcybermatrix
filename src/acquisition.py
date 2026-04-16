@@ -1,11 +1,13 @@
 # acquisition.py -- Collecte reelle des articles cyber
 # Sprint 6 : 7 API + 100 flux RSS = 107 sources
 # Nouvelles API : Ransomware.live, ThreatFox, URLhaus, MalwareBazaar
+# v9.2 : NVD avec filtre temporel + retry / RSS logging détaillé par flux
 # Sortie : data/raw/articles_YYYY-MM-DD.csv
 
 import logging
 import os
-from datetime import datetime
+import time
+from datetime import datetime, timedelta, timezone
 
 import feedparser
 import pandas as pd
@@ -30,7 +32,7 @@ HEADERS_CHROME = {
     )
 }
 
-# -- 61 flux RSS organises en 7 groupes --
+# -- 100 flux RSS organises en groupes (S5 + S6 batch 1 + S6 batch 2) --
 RSS_FEEDS = {
     # Presse anglo generaliste (9)
     "The Hacker News":        "https://feeds.feedburner.com/TheHackersNews",
@@ -87,7 +89,7 @@ RSS_FEEDS = {
     "Maltego Blog":           "https://www.maltego.com/blog/feed/",
     "NixIntel":               "https://nixintel.info/feed/",
     "Sector035":              "https://sector035.nl/feed",
-    # Threat Intelligence (11+)
+    # Threat Intelligence (14)
     "SANS ISC":               "https://isc.sans.edu/rssfeed_full.xml",
     "Mandiant Blog":          "https://www.mandiant.com/resources/blog/rss.xml",
     "CrowdStrike Blog":       "https://www.crowdstrike.com/blog/feed/",
@@ -102,7 +104,7 @@ RSS_FEEDS = {
     "Censys Blog":            "https://censys.com/blog/feed/",
     "VulnCheck":              "https://vulncheck.com/blog/rss.xml",
     "AttackerKB":             "https://attackerkb.com/blog/feed/",
-    # ── Sprint 6 : +20 sources ──
+    # ── Sprint 6 batch 1 : +20 sources ──
     # Francophone (4)
     "Cybermalveillance":      "https://www.cybermalveillance.gouv.fr/feed/",
     "IT-Connect":             "https://www.it-connect.fr/feed/",
@@ -127,10 +129,10 @@ RSS_FEEDS = {
     "BSI Allemagne":          "https://www.bsi.bund.de/SiteGlobals/Functions/RSSFeed/RSSNewsfeed/RSSBSINews_en.xml",
     "JPCERT Japon":           "https://www.jpcert.or.jp/english/rss/jpcert-en.rdf",
     "Google Security Blog":   "https://security.googleblog.com/feeds/posts/default",
-    # ── Sprint 6 batch 2 : +19 sources (total 100 RSS) ──
+    # ── Sprint 6 batch 2 : +19 sources ──
     # Presse / News cyber (4)
     "TechCrunch Security":    "https://techcrunch.com/tag/cybersecurity/feed/",
-    "Cyber Defense Magazine":  "https://cyberdefensemagazine.com/feed/",
+    "Cyber Defense Magazine": "https://cyberdefensemagazine.com/feed/",
     "Heimdal Blog":           "https://heimdalsecurity.com/blog/feed/",
     "Troy Hunt":              "https://troyhunt.com/rss/",
     # Vendors recherche (7)
@@ -156,7 +158,7 @@ RSS_FEEDS = {
 
 
 def _row(source, title, description, url, published_at):
-    """Format standard pour chaque article collecte."""
+    # Format standard pour chaque article collecté
     return {
         "source":       source,
         "title":        title or "",
@@ -213,7 +215,6 @@ def collect_otx():
         return []
 
     try:
-        # activity/community ne requiert pas d'abonnement (vs /subscribed)
         r = requests.get(
             "https://otx.alienvault.com/api/v1/pulses/activity",
             headers={"X-OTX-API-KEY": key, **HEADERS_CHROME},
@@ -241,26 +242,56 @@ def collect_otx():
 
 
 # ---------------------------------------------------
-# 3. NVD / NIST
+# 3. NVD / NIST -- avec filtre temporel + retry x3 (v9.2)
 # ---------------------------------------------------
 def collect_nvd():
-    headers = {**HEADERS_CHROME}
+    headers = {**HEADERS_CHROME, "Accept": "application/json"}
     key = os.getenv("NVD_API_KEY")
     if key:
         headers["apiKey"] = key
 
-    try:
-        r = requests.get(
-            "https://services.nvd.nist.gov/rest/json/cves/2.0",
-            headers=headers,
-            params={"resultsPerPage": 20},
-            timeout=30,
-        )
-        if r.status_code == 404:
-            log.warning("NVD : 404 -- endpoint temporairement indisponible")
-            return []
-        r.raise_for_status()
+    # Filtre temporel obligatoire -- NVD rejette les requêtes sans borne temporelle
+    pub_end   = datetime.now(timezone.utc)
+    pub_start = pub_end - timedelta(days=7)
 
+    params = {
+        "resultsPerPage": 20,
+        # Format NVD : YYYY-MM-DDTHH:MM:SS.000
+        "pubStartDate":   pub_start.strftime("%Y-%m-%dT%H:%M:%S.000"),
+        "pubEndDate":     pub_end.strftime("%Y-%m-%dT%H:%M:%S.000"),
+    }
+
+    # Retry x3 avec backoff -- NVD a des 404/503/429 sporadiques documentés
+    # Rate limit : 5 req/30s sans clé, 50 req/30s avec clé -> backoff 6s
+    r = None
+    for attempt in range(1, 4):
+        try:
+            r = requests.get(
+                "https://services.nvd.nist.gov/rest/json/cves/2.0",
+                headers=headers, params=params, timeout=30,
+            )
+            if r.status_code == 200:
+                break
+            if r.status_code in (403, 404, 429, 503):
+                log.warning("NVD tentative %d/3 : HTTP %d -- backoff 6s", attempt, r.status_code)
+                time.sleep(6)
+                continue
+            r.raise_for_status()
+        except requests.exceptions.Timeout:
+            log.warning("NVD tentative %d/3 : timeout", attempt)
+            time.sleep(6)
+        except Exception as e:
+            log.warning("NVD tentative %d/3 : %s", attempt, e)
+            time.sleep(6)
+    else:
+        log.error("NVD : 3 tentatives échouées, skip")
+        return []
+
+    if r is None or r.status_code != 200:
+        log.error("NVD : réponse invalide après retry, skip")
+        return []
+
+    try:
         articles = []
         for item in r.json().get("vulnerabilities", []):
             cve   = item.get("cve", {})
@@ -283,17 +314,16 @@ def collect_nvd():
                 cve.get("published"),
             ))
 
-        log.info("NVD : %d CVE", len(articles))
+        log.info("NVD : %d CVE (fenêtre 7j)", len(articles))
         return articles
 
     except Exception as e:
-        log.error("NVD : %s", e)
+        log.error("NVD parsing : %s", e)
         return []
 
 
 # ---------------------------------------------------
-# 4. RANSOMWARE.LIVE -- victimes recentes avec groupe
-# Gratuit, pas de cle API
+# 4. RANSOMWARE.LIVE
 # ---------------------------------------------------
 def collect_ransomware_live():
     try:
@@ -313,7 +343,6 @@ def collect_ransomware_live():
             date    = v.get("discovered", "") or v.get("published", "")
             url     = v.get("post_url") or v.get("website", "") or ""
 
-            # Titre structure pour le NLP : "Groupe revendique Victime (Pays)"
             title = f"{group} ransomware attack on {victim}"
             if country:
                 title += f" ({country})"
@@ -322,9 +351,7 @@ def collect_ransomware_live():
             if country:
                 desc += f" Victim located in {country}."
 
-            articles.append(_row(
-                "Ransomware.live", title, desc, url, date,
-            ))
+            articles.append(_row("Ransomware.live", title, desc, url, date))
 
         log.info("Ransomware.live : %d victimes", len(articles))
         return articles
@@ -335,8 +362,7 @@ def collect_ransomware_live():
 
 
 # ---------------------------------------------------
-# 5. THREATFOX (Abuse.ch) -- IOCs avec familles malware
-# Gratuit, requiert Auth-Key (https://auth.abuse.ch/)
+# 5. THREATFOX
 # ---------------------------------------------------
 def collect_threatfox():
     key = os.getenv("ABUSECH_AUTH_KEY")
@@ -367,18 +393,16 @@ def collect_threatfox():
             threat  = ioc.get("threat_type_desc", "")
             date    = ioc.get("first_seen_utc", "")
 
-            # Dedup par famille+type (evite 50 IOCs identiques)
-            key = f"{family}_{threat}"
-            if key in seen:
+            dedup_key = f"{family}_{threat}"
+            if dedup_key in seen:
                 continue
-            seen.add(key)
+            seen.add(dedup_key)
 
             title = f"{family} -- {threat}" if threat else family
             desc  = f"Malware family: {family}. IOC: {ioc_val}. Tags: {tags}"
 
             articles.append(_row(
-                "ThreatFox",
-                title, desc,
+                "ThreatFox", title, desc,
                 f"https://threatfox.abuse.ch/ioc/{ioc.get('id', '')}",
                 date,
             ))
@@ -392,8 +416,7 @@ def collect_threatfox():
 
 
 # ---------------------------------------------------
-# 6. URLHAUS (Abuse.ch) -- URLs malveillantes recentes
-# Gratuit, requiert Auth-Key (https://auth.abuse.ch/)
+# 6. URLHAUS
 # ---------------------------------------------------
 def collect_urlhaus():
     key = os.getenv("ABUSECH_AUTH_KEY")
@@ -418,11 +441,10 @@ def collect_urlhaus():
             url_v  = u.get("url", "")
             date   = u.get("date_added", "")
 
-            # Dedup par threat type
-            key = f"{threat}_{tags}"
-            if key in seen:
+            dedup_key = f"{threat}_{tags}"
+            if dedup_key in seen:
                 continue
-            seen.add(key)
+            seen.add(dedup_key)
 
             title = f"Malicious URL distributing {threat}"
             if tags:
@@ -444,8 +466,7 @@ def collect_urlhaus():
 
 
 # ---------------------------------------------------
-# 7. MALWAREBAZAAR (Abuse.ch) -- echantillons malware recents
-# Gratuit, requiert Auth-Key (https://auth.abuse.ch/)
+# 7. MALWAREBAZAAR
 # ---------------------------------------------------
 def collect_malwarebazaar():
     key = os.getenv("ABUSECH_AUTH_KEY")
@@ -476,7 +497,6 @@ def collect_malwarebazaar():
             date   = s.get("first_seen", "")
             sha    = s.get("sha256_hash", "")[:16]
 
-            # Dedup par famille
             if family in seen:
                 continue
             seen.add(family)
@@ -499,43 +519,72 @@ def collect_malwarebazaar():
 
 
 # ---------------------------------------------------
-# 8. FLUX RSS (61 sources, fallback 2 etapes)
+# 8. FLUX RSS -- logging détaillé par flux (v9.2)
 # ---------------------------------------------------
 def collect_rss():
-    articles = []
-    ok = err = 0
+    articles  = []
+    ok_count  = 0
+    ko_list   = []   # [(nom, motif)] -- pour récap à la fin
 
     for name, url in RSS_FEEDS.items():
-        feed = None
+        feed    = None
+        err_msg = None
 
-        # Etape 1 : requests + User-Agent Chrome (evite les blocages)
+        # Etape 1 : requests + UA Chrome (evite les blocages anti-bot)
         try:
-            r    = requests.get(url, headers=HEADERS_CHROME, timeout=TIMEOUT)
-            feed = feedparser.parse(r.content)
-        except Exception:
-            pass
+            r = requests.get(url, headers=HEADERS_CHROME, timeout=TIMEOUT)
+            if r.status_code >= 400:
+                err_msg = f"HTTP {r.status_code}"
+            else:
+                feed = feedparser.parse(r.content)
+        except requests.exceptions.Timeout:
+            err_msg = "timeout"
+        except requests.exceptions.ConnectionError:
+            err_msg = "connection_refused"
+        except Exception as e:
+            err_msg = type(e).__name__
 
-        # Etape 2 : feedparser direct si etape 1 a echoue ou 0 entrees
+        # Etape 2 : feedparser direct en fallback (si etape 1 KO ou 0 entrées)
         if not feed or len(feed.entries) == 0:
             try:
                 feed = feedparser.parse(url)
-            except Exception:
-                log.warning("%-30s -- echec total", name)
-                err += 1
+            except Exception as e:
+                motif = err_msg or type(e).__name__
+                log.warning("RSS EXCEPTION : %-30s -> %s", name, motif)
+                ko_list.append((name, motif))
                 continue
 
+        # Diagnostic final : 3 cas distincts pour logs actionnables
+        # Cas 1 : XML malformé ET 0 entries -> flux cassé
+        if feed.bozo and feed.bozo_exception and len(feed.entries) == 0:
+            motif = type(feed.bozo_exception).__name__
+            log.warning("RSS KO       : %-30s -> %s", name, motif)
+            ko_list.append((name, motif))
+            continue
+
+        # Cas 2 : parsing OK mais 0 entries -> flux réellement vide
+        if len(feed.entries) == 0:
+            motif = err_msg or "0_entries"
+            log.warning("RSS VIDE     : %-30s -> %s", name, motif)
+            ko_list.append((name, motif))
+            continue
+
+        # Cas 3 : entries présentes -> on prend (même si bozo True avec warnings mineurs)
         entries = [
             _row(name, e.get("title"), e.get("summary"), e.get("link"), e.get("published"))
             for e in feed.entries
         ]
+        articles.extend(entries)
+        ok_count += 1
 
-        if entries:
-            articles.extend(entries)
-            ok += 1
-        else:
-            err += 1
+    log.info("RSS : %d sources OK / %d erreurs ou vides", ok_count, len(ko_list))
 
-    log.info("RSS : %d sources OK / %d erreurs ou vides", ok, err)
+    # Récapitulatif des KO (utile pour décider quoi retirer / corriger)
+    if ko_list:
+        log.info("RSS KO détail (%d flux) :", len(ko_list))
+        for name, motif in ko_list:
+            log.info("  - %-30s : %s", name, motif)
+
     return articles
 
 
@@ -551,7 +600,6 @@ def _save_to_csv(articles):
     filepath = os.path.join(OUTPUT_DIR, f"articles_{today}.csv")
     df       = pd.DataFrame(articles)
 
-    # Append si fichier du jour existe deja (relance intra-journee)
     if os.path.exists(filepath):
         df.to_csv(filepath, mode="a", header=False, index=False, encoding="utf-8")
     else:
