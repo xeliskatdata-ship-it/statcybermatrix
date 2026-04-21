@@ -1,6 +1,5 @@
-# v2 sidebar counts
 # db_connect.py -- Connexion PostgreSQL partagee entre toutes les pages KPI
-# Cache TTL 120s via @st.cache_data -- force_refresh() vide tout
+# Cache TTL 3600s (1h) aligne sur le cron GitHub Actions -- force_refresh() vide tout
 # Dual mode : st.secrets (Streamlit Cloud) ou .env (Docker local)
 
 import os
@@ -11,11 +10,16 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
 load_dotenv()
-# Fenêtres glissantes -- source de vérité unique pour toutes les pages
-WINDOW_MAP_DAYS = 90   # Carte des menaces (patterns géopolitiques)
-WINDOW_KPI_DAYS = 30   # Pages KPI (indicateurs opérationnels)
 
-# -- Connexion dual Cloud / Local
+# Fenetres glissantes -- source de verite unique pour toutes les pages
+WINDOW_MAP_DAYS = 90   # Carte des menaces (patterns geopolitiques)
+WINDOW_KPI_DAYS = 30   # Pages KPI (indicateurs operationnels)
+
+# TTL cache aligne sur le cron horaire (marts refresh max 1x/h)
+# Etait a 120s -> 30 rechargements inutiles par heure -> quota Neon exploser
+CACHE_TTL = 3600
+
+# -- Connexion dual Cloud / Local --
 if "postgres" in st.secrets:
     s = st.secrets["postgres"]
     DATABASE_URL = (
@@ -40,7 +44,7 @@ def get_engine():
     return create_engine(DATABASE_URL, pool_pre_ping=True)
 
 
-# -- Helper pour eviter la repetition query → df → cast date --
+# -- Helper pour eviter la repetition query -> df -> cast date --
 def _query(sql, date_cols=None):
     with get_engine().connect() as conn:
         df = pd.read_sql(text(sql), conn)
@@ -50,7 +54,7 @@ def _query(sql, date_cols=None):
     return df
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=CACHE_TTL)
 def get_mart_k1():
     return _query("""
         SELECT published_date, source, nb_articles
@@ -60,7 +64,7 @@ def get_mart_k1():
     """, date_cols=["published_date"])
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=CACHE_TTL)
 def get_mart_k2():
     return _query("""
         SELECT keyword, category, sub_category,
@@ -70,10 +74,10 @@ def get_mart_k2():
     """)
 
 
-@st.cache_data(ttl=120)
-@st.cache_data(ttl=120)
+# Bug corrige : le double @st.cache_data d'origine a ete supprime
+@st.cache_data(ttl=CACHE_TTL)
 def get_stg_articles(keyword=None, limit=5000, window_days=None):
-    # window_days : fenêtre glissante en jours (None = pas de filtre temporel)
+    # window_days : fenetre glissante en jours (None = pas de filtre temporel)
     # Utilise WINDOW_MAP_DAYS pour la carte, WINDOW_KPI_DAYS pour les KPI
     base = """
         SELECT source, title, description, url,
@@ -82,7 +86,7 @@ def get_stg_articles(keyword=None, limit=5000, window_days=None):
         WHERE published_date IS NOT NULL
     """
 
-    # Filtre fenêtre glissante optionnel
+    # Filtre fenetre glissante optionnel
     window_clause = " AND published_date >= CURRENT_DATE - INTERVAL '1 day' * :window" if window_days else ""
 
     if keyword:
@@ -104,7 +108,7 @@ def get_stg_articles(keyword=None, limit=5000, window_days=None):
     return df
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=CACHE_TTL)
 def get_articles_by_keyword(keyword, period_days=7):
     # Utilisee par KPI2 au clic sur une bulle du scatter
     sql = """
@@ -123,7 +127,7 @@ def get_articles_by_keyword(keyword, period_days=7):
     return df
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=CACHE_TTL)
 def get_mart_k3():
     return _query("""
         SELECT category, source, nb_articles
@@ -132,7 +136,7 @@ def get_mart_k3():
     """)
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=CACHE_TTL)
 def get_mart_k4():
     return _query("""
         SELECT published_date, category, nb_mentions
@@ -141,7 +145,7 @@ def get_mart_k4():
     """, date_cols=["published_date"])
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=CACHE_TTL)
 def get_mart_k5():
     return _query("""
         SELECT semaine, category, nb_alertes
@@ -150,7 +154,7 @@ def get_mart_k5():
     """, date_cols=["semaine"])
 
 
-@st.cache_data(ttl=120)
+@st.cache_data(ttl=CACHE_TTL)
 def get_mart_k6():
     return _query("""
         SELECT cve, nb_mentions
@@ -158,7 +162,8 @@ def get_mart_k6():
         ORDER BY nb_mentions DESC
     """)
 
-@st.cache_data(ttl=120)
+
+@st.cache_data(ttl=CACHE_TTL)
 def get_sidebar_counts():
     with get_engine().connect() as conn:
         counts = {}
@@ -174,6 +179,7 @@ def get_sidebar_counts():
             except Exception:
                 pass
     return counts
+
 
 def force_refresh():
     # Vide le cache Streamlit -- force rechargement depuis PostgreSQL
