@@ -20,7 +20,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / "src"))
 from db_connect import get_stg_articles, get_mart_k6, force_refresh, WINDOW_MAP_DAYS
 
 st.set_page_config(
-    page_title="Globe de veille cyber",
+    page_title="Globe 3D",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
