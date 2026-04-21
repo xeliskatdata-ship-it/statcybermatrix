@@ -11,6 +11,10 @@ __pycache__/
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+secrets.toml
+.streamlit/secrets.toml
 
 # ── dbt ───────────────────────────────────────────────
 dbt/target/
@@ -48,3 +52,6 @@ Thumbs.db
 
 # Dossier data complet
 data/
+
+# Fichier temporaire de nettoyage d'historique (NE PAS COMMITER)
+secrets-to-remove.txt
