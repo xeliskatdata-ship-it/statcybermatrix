@@ -1,6 +1,7 @@
 # 3_Analyse_des_menaces.py -- StatCyberMatrix i18n
 
 import sys, os
+import numpy as np
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -78,13 +79,41 @@ if not df.empty:
 
     _lbl_x = {"en": "Threat categories", "fr": "Categories de menaces"}
     _lbl_y = {"en": "Intelligence sources", "fr": "Sources de veille"}
-    fig_heat = px.imshow(pivot, labels=dict(x=_lbl_x[lang], y=_lbl_y[lang], color="Volume"),
-        color_continuous_scale=['#050a14', '#3b82f6', '#a855f7', '#00d4ff'], aspect="auto")
-    fig_heat.update_layout(height=600, xaxis=dict(side="top"), paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(5,10,20,0.4)", font=dict(family="JetBrains Mono", size=12, color="#c8d6e5"),
-        margin=dict(t=100, b=50, l=50, r=50))
+
+    # Transformation log10 -> revaloriser les signaux faibles (distribution asymetrique : NVD 1266 vs autres 1-10)
+    matrix_raw = pivot.values
+    matrix_log = np.log10(matrix_raw + 1)  # +1 pour gerer les zeros proprement
+
+    fig_heat = go.Figure(go.Heatmap(
+        z=matrix_log,
+        x=list(pivot.columns),
+        y=list(pivot.index),
+        customdata=matrix_raw,                     # on garde les vraies valeurs pour le hover
+        colorscale=[
+            [0.00, '#0d1b2a'],                     # fond visible, pas noir pur
+            [0.15, '#1e3a8a'],                     # on saute vite au bleu -> faibles valeurs lisibles
+            [0.50, '#7c3aed'],
+            [1.00, '#00d4ff'],
+        ],
+        xgap=1, ygap=1,                            # separation des cellules pour lire la grille
+        hovertemplate="<b>%{y}</b><br>%{x}<br>Volume: %{customdata:.0f}<extra></extra>",
+        colorbar=dict(
+            title="Volume",
+            tickvals=[0, 1, 2, 3],                 # echelle log : 10^0..10^3
+            ticktext=['1', '10', '100', '1K+'],    # affichage des vraies valeurs
+        ),
+    ))
+    fig_heat.update_layout(
+        height=600,
+        xaxis=dict(side="top", title=_lbl_x[lang]),
+        yaxis=dict(title=_lbl_y[lang]),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(5,10,20,0.4)",
+        font=dict(family="JetBrains Mono", size=12, color="#c8d6e5"),
+        margin=dict(t=100, b=50, l=50, r=50),
+    )
     if len(pivot.index) < 20:
-        fig_heat.update_traces(text=pivot.values, texttemplate="%{text}")
+        fig_heat.update_traces(text=matrix_raw, texttemplate="%{text:.0f}")
     st.plotly_chart(fig_heat, use_container_width=True)
 
 # ── Deep Dive ────────────────────────────────────────────────────────────────
