@@ -83,13 +83,36 @@ col_l, col_r = st.columns([1, 1])
 with col_l:
     _heat = {"en": "Temporal density (Heatmap)", "fr": "Densite temporelle (Heatmap)"}
     st.markdown(f'<div class="section-title">{_heat[lang]}</div>', unsafe_allow_html=True)
-    pivot_df = df.pivot_table(index='category', columns='semaine', values='nb_alertes', aggfunc='sum')
-    fig_heat = px.imshow(pivot_df, color_continuous_scale=['#050a14', '#3b82f6', '#a855f7', '#00d4ff'], aspect="auto")
-    fig_heat.update_xaxes(tickformat="%d/%m/%y")
+    pivot_df = df.pivot_table(index='category', columns='semaine', values='nb_alertes', aggfunc='sum').fillna(0)
+
     _h_date = {"en": "Date", "fr": "Date"}
     _h_cat = {"en": "Category", "fr": "Categorie"}
     _h_alerts = {"en": "Alerts", "fr": "Alertes"}
-    fig_heat.update_traces(hovertemplate=f"{_h_date[lang]}: %{{x|%d/%m/%Y}}<br>{_h_cat[lang]}: %{{y}}<br>{_h_alerts[lang]}: %{{z}}<extra></extra>")
+
+    # Transformation log10 -> revaloriser les signaux faibles (general domine, autres quasi invisibles)
+    matrix_raw = pivot_df.values
+    matrix_log = np.log10(matrix_raw + 1)  # +1 pour gerer les zeros proprement
+
+    fig_heat = go.Figure(go.Heatmap(
+        z=matrix_log,
+        x=list(pivot_df.columns),
+        y=list(pivot_df.index),
+        customdata=matrix_raw,                     # on garde les vraies valeurs pour le hover
+        colorscale=[
+            [0.00, '#0d1b2a'],                     # fond visible, pas noir pur
+            [0.15, '#1e3a8a'],                     # saut rapide au bleu -> faibles valeurs lisibles
+            [0.50, '#7c3aed'],
+            [1.00, '#00d4ff'],
+        ],
+        xgap=1, ygap=1,                            # separation des cellules -> grille lisible
+        hovertemplate=f"{_h_date[lang]}: %{{x|%d/%m/%Y}}<br>{_h_cat[lang]}: %{{y}}<br>{_h_alerts[lang]}: %{{customdata:.0f}}<extra></extra>",
+        colorbar=dict(
+            title=_h_alerts[lang],
+            tickvals=[0, 1, 2, 3],                 # echelle log : 10^0..10^3
+            ticktext=['1', '10', '100', '1K+'],    # affichage des vraies valeurs
+        ),
+    ))
+    fig_heat.update_xaxes(tickformat="%d/%m/%y")
     fig_heat.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(5,10,20,0.4)",
         font=dict(family="JetBrains Mono", size=11, color="#c8d6e5"), margin=dict(t=10, b=20, l=10, r=10))
     st.plotly_chart(fig_heat, use_container_width=True)
