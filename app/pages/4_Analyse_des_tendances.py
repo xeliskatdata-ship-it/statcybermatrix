@@ -95,12 +95,20 @@ if not df_mart.empty:
         # Marqueurs distincts pour les anomalies (redondance couleur+forme = lisible meme en N&B)
         symbols = ['star' if z >= 2 else 'circle' for z in data_trend['z_score']]
         sizes = [22 if z >= 2 else 14 for z in data_trend['z_score']]
-        # Alternance top/bottom pour desencombrer les labels qui se chevauchent
+        # Alternance top/bottom -> desencombrer les labels qui restent
         positions = ["top center" if i % 2 == 0 else "bottom center" for i in range(len(data_trend))]
+        # Labels conditionnels : on affiche la date uniquement sur les points interessants (Z >= 1)
+        # Les autres points restent visibles (cercle) mais sans label -> plus de chevauchement
+        text_labels = [
+            d.strftime('%d/%m') if z >= 1 else ''
+            for d, z in zip(data_trend['published_date'], data_trend['z_score'])
+        ]
+        # Dates completes pour le hover enrichi (meme sur les points sans label)
+        hover_dates = data_trend['published_date'].dt.strftime('%d/%m/%Y').tolist()
 
         fig = px.scatter(
             data_trend, x='nb_mentions', y='z_score', color='z_score',
-            text=data_trend['published_date'].dt.strftime('%d/%m'),
+            text=text_labels,
             labels={'nb_mentions': _lbl_x[lang], 'z_score': _lbl_y[lang]},
             # Gradient semantique : bleu calme -> violet -> orange vigilance -> rouge alerte
             color_continuous_scale=[
@@ -117,21 +125,25 @@ if not df_mart.empty:
         fig.add_hrect(y0=1, y1=2, fillcolor="#f59e0b", opacity=0.07, line_width=0)
         fig.add_hrect(y0=2, y1=5, fillcolor="#ef4444", opacity=0.08, line_width=0)
 
-        # Double seuil (vigilance + anomalie) pour materialiser les 3 regimes
+        # Annotations a gauche pour eviter le chevauchement avec la colorbar a droite
         fig.add_hline(y=1, line_dash="dot", line_color="#f59e0b",
-                      annotation_text=_watch[lang], annotation_position="right",
+                      annotation_text=_watch[lang], annotation_position="top left",
                       annotation=dict(font_color="#f59e0b", font_size=10))
         fig.add_hline(y=2, line_dash="dash", line_color="#ef4444",
-                      annotation_text=_anomaly[lang], annotation_position="right",
+                      annotation_text=_anomaly[lang], annotation_position="top left",
                       annotation=dict(font_color="#ef4444", font_size=10))
 
-        # Application symboles + tailles + positions de texte (anti-overlap)
+        # Application symboles + tailles + positions + hover enrichi
         fig.update_traces(
             marker=dict(symbol=symbols, size=sizes, line=dict(width=1, color="rgba(255,255,255,0.3)")),
             textposition=positions,
             textfont=dict(size=9, color="#e8f0fe"),
+            customdata=[[d] for d in hover_dates],
+            hovertemplate="<b>%{customdata[0]}</b><br>Volume: %{x}<br>Z-score: %{y:.2f}<extra></extra>",
         )
         fig.update_layout(**PLOTLY_THEME)
+        # Marge droite elargie -> aere la colorbar et ses labels
+        fig.update_layout(margin_r=110)
         st.plotly_chart(fig, use_container_width=True)
 
         status = "CRITICAL" if top_emergence['z_score'] > 2 else "STABLE"
@@ -179,7 +191,8 @@ if not df_mart.empty:
         _src_title = {"en": f"Sources on {date_pic_str} ({target})", "fr": f"Sources au {date_pic_str} ({target})"}
         st.markdown(f'<div class="section-title">{_src_title[lang]}</div>', unsafe_allow_html=True)
         try:
-            df_articles = get_stg_articles(limit=2000)
+            # Limite elargie : couvrir la fenetre 30j (~400 articles/jour x 30 = 12k)
+            df_articles = get_stg_articles(limit=10000)
             df_articles['published_date'] = pd.to_datetime(df_articles['published_date']).dt.normalize()
             if is_all:
                 sources_pic = df_articles[df_articles['published_date'] == raw_date_pic]
