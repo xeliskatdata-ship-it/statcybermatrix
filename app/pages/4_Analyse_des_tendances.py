@@ -86,13 +86,51 @@ if not df_mart.empty:
         vol_pic = int(top_emergence['nb_mentions'])
         bond_percent = ((vol_pic - mean_val) / mean_val * 100) if mean_val > 0 else 0
 
+        # ── VISU AMELIOREE : zones de regime + double seuil + symboles + anti-overlap ──
         _anomaly = {"en": "Anomaly threshold", "fr": "Seuil anomalie"}
-        fig = px.scatter(data_trend, x='nb_mentions', y='z_score', size='nb_mentions', color='z_score',
+        _watch = {"en": "Watch threshold", "fr": "Seuil vigilance"}
+        _lbl_x = {"en": "Mention volume", "fr": "Volume mentions"}
+        _lbl_y = {"en": "Acceleration (Z-score)", "fr": "Indice d'acceleration (Z)"}
+
+        # Marqueurs distincts pour les anomalies (redondance couleur+forme = lisible meme en N&B)
+        symbols = ['star' if z >= 2 else 'circle' for z in data_trend['z_score']]
+        sizes = [22 if z >= 2 else 14 for z in data_trend['z_score']]
+        # Alternance top/bottom pour desencombrer les labels qui se chevauchent
+        positions = ["top center" if i % 2 == 0 else "bottom center" for i in range(len(data_trend))]
+
+        fig = px.scatter(
+            data_trend, x='nb_mentions', y='z_score', color='z_score',
             text=data_trend['published_date'].dt.strftime('%d/%m'),
-            color_continuous_scale=['#050a14', '#a855f7', '#00d4ff'], height=450)
-        fig.add_hline(y=2.0, line_dash="dash", line_color="#ef4444",
-            annotation_text=_anomaly[lang], annotation=dict(font_color="#ef4444", font_size=10))
-        fig.update_traces(textfont=dict(size=10, color="#c8d6e5"))
+            labels={'nb_mentions': _lbl_x[lang], 'z_score': _lbl_y[lang]},
+            # Gradient semantique : bleu calme -> violet -> orange vigilance -> rouge alerte
+            color_continuous_scale=[
+                [0.0, '#3b82f6'],
+                [0.4, '#a855f7'],
+                [0.7, '#f59e0b'],
+                [1.0, '#ef4444'],
+            ],
+            height=500,
+        )
+
+        # Zones colorees de regime : calme / vigilance / anomalie
+        fig.add_hrect(y0=-5, y1=1, fillcolor="#22c55e", opacity=0.05, line_width=0)
+        fig.add_hrect(y0=1, y1=2, fillcolor="#f59e0b", opacity=0.07, line_width=0)
+        fig.add_hrect(y0=2, y1=5, fillcolor="#ef4444", opacity=0.08, line_width=0)
+
+        # Double seuil (vigilance + anomalie) pour materialiser les 3 regimes
+        fig.add_hline(y=1, line_dash="dot", line_color="#f59e0b",
+                      annotation_text=_watch[lang], annotation_position="right",
+                      annotation=dict(font_color="#f59e0b", font_size=10))
+        fig.add_hline(y=2, line_dash="dash", line_color="#ef4444",
+                      annotation_text=_anomaly[lang], annotation_position="right",
+                      annotation=dict(font_color="#ef4444", font_size=10))
+
+        # Application symboles + tailles + positions de texte (anti-overlap)
+        fig.update_traces(
+            marker=dict(symbol=symbols, size=sizes, line=dict(width=1, color="rgba(255,255,255,0.3)")),
+            textposition=positions,
+            textfont=dict(size=9, color="#e8f0fe"),
+        )
         fig.update_layout(**PLOTLY_THEME)
         st.plotly_chart(fig, use_container_width=True)
 
