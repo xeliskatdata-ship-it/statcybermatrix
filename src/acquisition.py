@@ -63,6 +63,8 @@ RSS_FEEDS = {
     "Zataz":                  "https://www.zataz.com/feed/",
     "French Breaches":        "https://frenchbreaches.com/feed.xml",
     "IT-Connect":             "https://www.it-connect.fr/feed/",
+    "Data Security Breach":   "https://www.datasecuritybreach.fr/feed/",
+    
     # Gouvernemental & CERTs (4)
     "ANSSI":                  "https://www.cert.ssi.gouv.fr/feed/",
     "CERT-EU":                "https://cert.europa.eu/publications/threat-intelligence-rss",
